@@ -1,0 +1,69 @@
+name: Post Question of the Day
+
+on:
+  schedule:
+    # 7:00 AM America/Chicago is 12:00 UTC in summer and 13:00 UTC in winter.
+    # Both slots run; the script only posts when it is actually 7 AM in Chicago.
+    - cron: '7 12 * * *'
+    - cron: '7 13 * * *'
+  workflow_dispatch:
+    inputs:
+      date:
+        description: 'Post a specific date (YYYY-MM-DD) now, skipping the 7 AM check'
+        required: false
+      dry_run:
+        description: 'Only log what would be posted'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: post-qotd
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Publish today's post
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          PAGES_BASE_URL: https://alexgateley.github.io/icubasics-social
+          POST_DATE: ${{ inputs.date }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/publish.mjs
+
+      - name: Record what was posted
+        run: |
+          git config user.name "icubasics-bot"
+          git config user.email "icubasics-bot@users.noreply.github.com"
+          git add published
+          git commit -m "Posted $(date -u +%F)" || echo "Nothing new to record"
+          git push
+
+      # Long-lived tokens last 60 days. Refresh weekly and store the new one, which needs a
+      # fine-grained personal access token (GH_PAT) with "Secrets: write" on this repo.
+      - name: Refresh the Instagram token (Sundays)
+        if: github.event_name == 'schedule'
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          if [ "$(date -u +%u)" != "7" ]; then echo "Not Sunday; skipping refresh"; exit 0; fi
+          node scripts/publish.mjs refresh
+          if [ -s new-token.txt ] && [ -n "$GH_TOKEN" ]; then
+            gh secret set IG_ACCESS_TOKEN --repo "$GITHUB_REPOSITORY" < new-token.txt
+            echo "Stored the refreshed token"
+          elif [ -s new-token.txt ]; then
+            echo "::warning::Token refreshed but GH_PAT is not set, so it could not be stored. Add GH_PAT or regenerate the token before it expires."
+          fi
+          rm -f new-token.txt
