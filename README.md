@@ -19,10 +19,15 @@ published/<date>.json                written by the job after posting (prevents 
 
 1. **GitHub Pages:** repo Settings → Pages → Source "Deploy from a branch", branch `main`, folder `/ (root)`.
    Images are then served at `https://alexgateley.github.io/icubasics-social/posts/...`.
-2. **Meta app:** at developers.facebook.com create an app, add the **Instagram** product, choose
-   "API setup with Instagram login", add the @icubasics professional account, and generate a token.
-   Copy the **Instagram user ID** and the **access token** it shows.
-3. **Secrets:** repo Settings → Secrets and variables → Actions:
+2. **Meta app:** at developers.facebook.com/apps create an app with the use case "Manage messaging
+   and content on Instagram" (Business app). In the left menu open Instagram → "API setup with
+   Instagram business login". Under "Generate access tokens" click Add account and log in as
+   @icubasics (a professional account), then under permissions click "Add all required permissions"
+   and also add `instagram_business_content_publish`. Click Generate token, log in, and copy the
+   **Instagram user ID** and the **access token** (long-lived, 60 days). The app can stay in
+   development mode: accounts with a role on the app need no App Review.
+3. **Secrets:** run `sh scripts/setup-secrets.sh` (prompts for the values, never shows the token,
+   checks it against the API), or add them by hand at repo Settings → Secrets and variables → Actions:
    - `IG_USER_ID` – the Instagram user id
    - `IG_ACCESS_TOKEN` – the long-lived token (60 days)
    - `GH_PAT` (optional but recommended) – a fine-grained personal access token for this repo with
