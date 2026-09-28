@@ -1,11 +1,11 @@
 🩺 Question of the Day · ACLS
 
-A patient with third-degree AV block and a wide-complex escape rhythm at 32 remains hypotensive (70/30) and confused after atropine 3 mg. What is the MOST appropriate next step?
+Megacode: A 7-year-old in cardiac arrest has VF on the monitor, and CPR is in progress. What is the recommended FIRST defibrillation energy?
 
-A) Give epinephrine 1 mg IV push
-B) Defibrillate at 200 J
-C) Start CPR while awaiting cardiology
-D) Pacing or a chronotropic infusion
+A) 4 J/kg
+B) Adult dose of 120–200 J
+C) 10 J/kg
+D) 2 J/kg
 
 Swipe for the answer and the rationale 👉
 
