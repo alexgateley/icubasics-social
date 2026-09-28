@@ -33,6 +33,13 @@ jobs:
         with:
           node-version: 22
 
+      - name: Check API access (dry run only)
+        if: inputs.dry_run
+        env:
+          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+        run: node scripts/publish.mjs check
+
       - name: Publish today's post
         env:
           IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
@@ -46,6 +53,7 @@ jobs:
         run: |
           git config user.name "icubasics-bot"
           git config user.email "icubasics-bot@users.noreply.github.com"
+          mkdir -p published
           git add published
           git commit -m "Posted $(date -u +%F)" || echo "Nothing new to record"
           git push

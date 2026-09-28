@@ -2,6 +2,7 @@
 //
 //   node scripts/publish.mjs            # post today's carousel (only at 7 AM America/Chicago)
 //   node scripts/publish.mjs refresh    # refresh the long-lived token, write it to new-token.txt
+//   node scripts/publish.mjs check      # verify the token, the account and the publishing quota
 //
 // Environment:
 //   IG_ACCESS_TOKEN   long-lived token from the Meta app dashboard (Instagram API with Instagram Login)
@@ -56,10 +57,19 @@ async function refreshToken() {
   console.log(`Token refreshed; valid for ${Math.round(json.expires_in / 86400)} more days`);
 }
 
+// Read-only: proves the token, the user id and the content-publishing permission all work
+async function checkAccess() {
+  if (!token || !userId) fail('IG_ACCESS_TOKEN and IG_USER_ID must be set');
+  const me = await api('me', { fields: 'user_id,username' }, 'GET');
+  const limit = await api(`${userId}/content_publishing_limit`, { fields: 'quota_usage,config' }, 'GET');
+  const q = limit.data?.[0] ?? {};
+  console.log(`Token OK for @${me.username} (${me.user_id}); posts used in the last 24 h: ${q.quota_usage ?? '?'} of ${q.config?.quota_total ?? '?'}`);
+}
+
 async function publishToday() {
   const now = localParts();
   const date = forcedDate || now.date;
-  if (!forcedDate && now.hour !== POST_HOUR) {
+  if (!forcedDate && !dryRun && now.hour !== POST_HOUR) {
     console.log(`It is ${now.hour}:00 in ${TZ}; posting happens at ${POST_HOUR}:00. Nothing to do.`);
     return;
   }
@@ -110,4 +120,4 @@ async function publishToday() {
 }
 
 const mode = process.argv[2] ?? 'post';
-(mode === 'refresh' ? refreshToken() : publishToday()).catch((e) => fail(e.message));
+(mode === 'refresh' ? refreshToken() : mode === 'check' ? checkAccess() : publishToday()).catch((e) => fail(e.message));
