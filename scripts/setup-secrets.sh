@@ -25,6 +25,7 @@ fi
 printf 'Instagram access token (paste, then Enter; it will not be shown): '
 stty -echo; read -r IG_ACCESS_TOKEN; stty echo; printf '\n'
 [ -n "$IG_USER_ID" ] && [ -n "$IG_ACCESS_TOKEN" ] || { echo "Both values are required."; exit 1; }
+case "$IG_USER_ID" in *[!0-9]*) echo "The Instagram user ID is a number (it looks like a token was pasted there). Start over and press Enter to accept the default ID."; exit 1 ;; esac
 # Check the token works before storing it
 ME=$(curl -s "https://graph.instagram.com/v25.0/me?fields=user_id,username&access_token=$IG_ACCESS_TOKEN")
 case "$ME" in
