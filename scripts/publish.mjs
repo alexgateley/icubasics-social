@@ -7,6 +7,7 @@
 // Environment:
 //   IG_ACCESS_TOKEN   long-lived token from the Meta app dashboard (Instagram API with Instagram Login)
 //   IG_USER_ID        the Instagram professional account id shown next to the token
+//   BRAND             icu (default, posts/ and published/) or rn (posts-rn/ and published-rn/)
 //   PAGES_BASE_URL    where posts/ is served, e.g. https://alexgateley.github.io/icubasics-social
 //   POST_DATE         optional YYYY-MM-DD to post a specific day and skip the time-of-day check
 //   DRY_RUN           "true" to log what would be posted without calling the API
@@ -22,6 +23,9 @@ const userId = process.env.IG_USER_ID;
 const base = (process.env.PAGES_BASE_URL || '').replace(/\/$/, '');
 const forcedDate = process.env.POST_DATE || '';
 const dryRun = process.env.DRY_RUN === 'true';
+const brand = process.env.BRAND || 'icu';
+const postsDir = brand === 'icu' ? 'posts' : `posts-${brand}`;
+const publishedDir = brand === 'icu' ? 'published' : `published-${brand}`;
 
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
 
@@ -75,20 +79,20 @@ async function publishToday() {
     console.log(`It is ${now.hour}:00 in ${TZ}; posting happens from ${POST_HOUR}:00. Nothing to do.`);
     return;
   }
-  const marker = path.join('published', `${date}.json`);
+  const marker = path.join(publishedDir, `${date}.json`);
   if (fs.existsSync(marker)) {
     console.log(`${date} was already posted (${marker}). Nothing to do.`);
     return;
   }
-  const index = JSON.parse(fs.readFileSync(path.join('posts', 'index.json'), 'utf8'));
+  const index = JSON.parse(fs.readFileSync(path.join(postsDir, 'index.json'), 'utf8'));
   const folder = index[date];
   if (!folder) {
-    console.log(`No post prepared for ${date}. Run push-month.sh in the app repo to add more days.`);
+    console.log(`No ${brand} post prepared for ${date}. Run push-month.sh in the app repo to add more days.`);
     return;
   }
-  const caption = fs.readFileSync(path.join('posts', folder, 'caption.txt'), 'utf8').trim();
-  const slides = ['1-question.jpg', '2-answer.jpg'].map((f) => `${base}/posts/${folder}/${f}`);
-  console.log(`Posting ${date} from ${folder}`);
+  const caption = fs.readFileSync(path.join(postsDir, folder, 'caption.txt'), 'utf8').trim();
+  const slides = ['1-question.jpg', '2-answer.jpg'].map((f) => `${base}/${postsDir}/${folder}/${f}`);
+  console.log(`Posting ${brand} ${date} from ${folder}`);
   slides.forEach((s) => console.log(`  ${s}`));
 
   if (dryRun) { console.log('DRY RUN: not calling the API.'); return; }
@@ -116,7 +120,7 @@ async function publishToday() {
   }
   const { id: mediaId } = await api(`${userId}/media_publish`, { creation_id: creationId });
 
-  fs.mkdirSync('published', { recursive: true });
+  fs.mkdirSync(publishedDir, { recursive: true });
   fs.writeFileSync(marker, JSON.stringify({ date, folder, mediaId, postedAt: new Date().toISOString() }, null, 2) + '\n');
   console.log(`Published: media id ${mediaId}`);
 }

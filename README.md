@@ -1,7 +1,8 @@
-# ICU Basics · Question of the Day
+# ICU Basics and RN Basics · Question of the Day
 
-Rendered Instagram posts for [@icubasics](https://www.instagram.com/icubasics), served from
-GitHub Pages, and a daily GitHub Actions job that publishes each day's carousel at 7:00 AM Central.
+Rendered Instagram posts for [@icubasics](https://www.instagram.com/icubasics) and
+[@rnbasicsnclex](https://www.instagram.com/rnbasicsnclex), served from GitHub Pages, and a daily
+GitHub Actions job that publishes each account's carousel at 7:00 AM Central.
 
 The posts are generated from the [ICU Basics](https://apps.apple.com/app/id6809866200) question
 banks by `scripts/social/push-month.sh` in the app repo, which renders a month of slides and
@@ -13,7 +14,10 @@ posts/<date>-<exam>/2-answer.jpg     slide 2
 posts/<date>-<exam>/caption.txt      caption with hashtags
 posts/index.json                     date → folder
 published/<date>.json                written by the job after posting (prevents double posts)
+posts-rn/..., published-rn/...       the same for RN Basics (NCLEX questions, @rnbasicsnclex)
 ```
+
+Generate RN Basics posts with `BRAND=rn scripts/social/push-month.sh <start> <days>` in the app repo.
 
 ## One-time setup
 
@@ -35,6 +39,10 @@ published/<date>.json                written by the job after posting (prevents 
      regenerate the token in the Meta dashboard every 60 days.
 4. **Test:** Actions → "Post Question of the Day" → Run workflow with `dry_run` checked, then once
    more with a `date` to post for real.
+5. **RN Basics:** repeat step 2 in the same Meta app, adding @rnbasicsnclex under "Generate access
+   tokens" (it must be a professional account), then `sh scripts/setup-secrets.sh rn`, which stores
+   `IG_USER_ID_RN` and `IG_ACCESS_TOKEN_RN`. Until those exist the RN job skips with a notice.
+   Test with `gh workflow run "Post Question of the Day" -f brand=rn -f dry_run=true`.
 
 ## Every month
 

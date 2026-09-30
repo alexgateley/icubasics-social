@@ -2,9 +2,10 @@ name: Post Question of the Day
 
 on:
   schedule:
-    # 7:00 AM America/Chicago is 12:00 UTC in summer and 13:00 UTC in winter. GitHub often runs
-    # scheduled jobs hours late, so several slots are tried; the script posts at the first run that
-    # lands at or after 7 AM Chicago and the marker in published/ stops the later ones.
+    # 7:00 AM America/Chicago is 12:00 UTC in summer and 13:00 UTC in winter. GitHub runs these
+    # hours late or not at all on a quiet repo, so a launch agent on Alex's Mac also kicks the
+    # workflow at 7:05 and 9:05 AM Chicago (see README). The script posts at the first run that
+    # lands at or after 7 AM Chicago and the marker in published*/ stops the later ones.
     - cron: '7 12 * * *'
     - cron: '7 13 * * *'
     - cron: '37 13 * * *'
@@ -12,6 +13,11 @@ on:
     - cron: '7 17 * * *'
   workflow_dispatch:
     inputs:
+      brand:
+        description: 'Which account to post for'
+        type: choice
+        options: [all, icu, rn]
+        default: all
       date:
         description: 'Post a specific date (YYYY-MM-DD) now, skipping the 7 AM check'
         required: false
@@ -23,13 +29,18 @@ on:
 permissions:
   contents: write
 
-concurrency:
-  group: post-qotd
-  cancel-in-progress: false
-
 jobs:
   post:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        brand: [icu, rn]
+    # One job per account; the marker commit step below retries around the other job's push
+    concurrency:
+      group: post-qotd-${{ matrix.brand }}
+      cancel-in-progress: false
+    if: ${{ github.event_name == 'schedule' || inputs.brand == 'all' || inputs.brand == '' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -37,45 +48,118 @@ jobs:
         with:
           node-version: 22
 
-      - name: Check API access (dry run only)
-        if: inputs.dry_run
+      # Each account has its own token and user id: IG_ACCESS_TOKEN / IG_USER_ID for @icubasics,
+      # IG_ACCESS_TOKEN_RN / IG_USER_ID_RN for @rnbasicsnclex. A brand whose secrets are not set yet
+      # is skipped with a notice instead of failing the run.
+      - name: Select the account's credentials
+        id: creds
         env:
-          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
-          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          ICU_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          ICU_USER: ${{ secrets.IG_USER_ID }}
+          RN_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_RN }}
+          RN_USER: ${{ secrets.IG_USER_ID_RN }}
+        run: |
+          if [ "${{ matrix.brand }}" = "icu" ]; then TOKEN="$ICU_TOKEN"; USER="$ICU_USER"; NAME=IG_ACCESS_TOKEN; else TOKEN="$RN_TOKEN"; USER="$RN_USER"; NAME=IG_ACCESS_TOKEN_RN; fi
+          if [ -z "$TOKEN" ] || [ -z "$USER" ]; then
+            echo "::notice::No credentials stored for ${{ matrix.brand }} yet (run scripts/setup-secrets.sh ${{ matrix.brand }}); skipping"
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "secret_name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "::add-mask::$TOKEN"
+          echo "IG_ACCESS_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "IG_USER_ID=$USER" >> "$GITHUB_ENV"
+
+      - name: Check API access (dry run only)
+        if: inputs.dry_run && steps.creds.outputs.ready == 'true'
+        env:
+          BRAND: ${{ matrix.brand }}
         run: node scripts/publish.mjs check
 
       - name: Publish today's post
+        if: steps.creds.outputs.ready == 'true'
         env:
-          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
-          IG_USER_ID: ${{ secrets.IG_USER_ID }}
+          BRAND: ${{ matrix.brand }}
           PAGES_BASE_URL: https://alexgateley.github.io/icubasics-social
           POST_DATE: ${{ inputs.date }}
           DRY_RUN: ${{ inputs.dry_run }}
         run: node scripts/publish.mjs
 
       - name: Record what was posted
+        if: steps.creds.outputs.ready == 'true'
         run: |
           git config user.name "icubasics-bot"
           git config user.email "icubasics-bot@users.noreply.github.com"
-          mkdir -p published
-          git add published
-          git commit -m "Posted $(date -u +%F)" || echo "Nothing new to record"
-          git push
+          git add published published-* 2>/dev/null || true
+          git commit -m "Posted ${{ matrix.brand }} $(date -u +%F)" || { echo "Nothing new to record"; exit 0; }
+          for i in 1 2 3 4 5; do
+            git pull --rebase -q origin main && git push -q && exit 0
+            sleep $((i * 5))
+          done
+          echo "::error::Could not push the marker after 5 attempts"; exit 1
 
       # Long-lived tokens last 60 days. Refresh weekly and store the new one, which needs a
       # fine-grained personal access token (GH_PAT) with "Secrets: write" on this repo.
       - name: Refresh the Instagram token (Sundays)
-        if: github.event_name == 'schedule'
+        if: github.event_name == 'schedule' && steps.creds.outputs.ready == 'true'
         env:
-          IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
           GH_TOKEN: ${{ secrets.GH_PAT }}
         run: |
           if [ "$(date -u +%u)" != "7" ]; then echo "Not Sunday; skipping refresh"; exit 0; fi
           node scripts/publish.mjs refresh
           if [ -s new-token.txt ] && [ -n "$GH_TOKEN" ]; then
-            gh secret set IG_ACCESS_TOKEN --repo "$GITHUB_REPOSITORY" < new-token.txt
-            echo "Stored the refreshed token"
+            gh secret set "${{ steps.creds.outputs.secret_name }}" --repo "$GITHUB_REPOSITORY" < new-token.txt
+            echo "Stored the refreshed ${{ matrix.brand }} token"
           elif [ -s new-token.txt ]; then
-            echo "::warning::Token refreshed but GH_PAT is not set, so it could not be stored. Add GH_PAT or regenerate the token before it expires."
+            echo "::warning::${{ matrix.brand }} token refreshed but GH_PAT is not set, so it could not be stored. Add GH_PAT or regenerate the token before it expires."
           fi
           rm -f new-token.txt
+
+  post-one:
+    # Manual run for a single account
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.brand == 'icu' || inputs.brand == 'rn') }}
+    concurrency:
+      group: post-qotd-${{ inputs.brand }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Select the account's credentials
+        env:
+          ICU_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+          ICU_USER: ${{ secrets.IG_USER_ID }}
+          RN_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_RN }}
+          RN_USER: ${{ secrets.IG_USER_ID_RN }}
+        run: |
+          if [ "${{ inputs.brand }}" = "icu" ]; then TOKEN="$ICU_TOKEN"; USER="$ICU_USER"; else TOKEN="$RN_TOKEN"; USER="$RN_USER"; fi
+          [ -n "$TOKEN" ] && [ -n "$USER" ] || { echo "::error::No credentials stored for ${{ inputs.brand }} (run scripts/setup-secrets.sh ${{ inputs.brand }})"; exit 1; }
+          echo "::add-mask::$TOKEN"
+          echo "IG_ACCESS_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "IG_USER_ID=$USER" >> "$GITHUB_ENV"
+      - name: Check API access (dry run only)
+        if: inputs.dry_run
+        env:
+          BRAND: ${{ inputs.brand }}
+        run: node scripts/publish.mjs check
+      - name: Publish today's post
+        env:
+          BRAND: ${{ inputs.brand }}
+          PAGES_BASE_URL: https://alexgateley.github.io/icubasics-social
+          POST_DATE: ${{ inputs.date }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: node scripts/publish.mjs
+      - name: Record what was posted
+        run: |
+          git config user.name "icubasics-bot"
+          git config user.email "icubasics-bot@users.noreply.github.com"
+          git add published published-* 2>/dev/null || true
+          git commit -m "Posted ${{ inputs.brand }} $(date -u +%F)" || { echo "Nothing new to record"; exit 0; }
+          for i in 1 2 3 4 5; do
+            git pull --rebase -q origin main && git push -q && exit 0
+            sleep $((i * 5))
+          done
+          echo "::error::Could not push the marker after 5 attempts"; exit 1
