@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Kicks the Question of the Day workflow at 7:05 and 9:05 AM Chicago (5:05 and 7:05 AM Pacific;
+       both zones observe daylight time, so the two-hour offset holds year round). launchd runs a
+       missed calendar job at the next wake, and the workflow never posts twice in a day.
+       Install: cp launchd/com.icubasics.qotd.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.qotd.plist -->
+  <key>Label</key>
+  <string>com.icubasics.qotd</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>/Users/alex/.gemini/antigravity-ide/scratch/icubasics-social/scripts/kick-post.sh</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Hour</key>
+      <integer>5</integer>
+      <key>Minute</key>
+      <integer>5</integer>
+    </dict>
+    <dict>
+      <key>Hour</key>
+      <integer>7</integer>
+      <key>Minute</key>
+      <integer>5</integer>
+    </dict>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-qotd.launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-qotd.launchd.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

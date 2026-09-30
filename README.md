@@ -48,3 +48,18 @@ here, updates `index.json`, and pushes. The job picks them up on their dates.
 - If a day has no folder in `index.json`, the job logs that and does nothing.
 - To skip a day, delete its folder before 7 AM. To re-post a day, delete `published/<date>.json`
   and run the workflow with that date.
+
+## Why posts arrive from a launch agent on Alex's Mac
+
+GitHub's cron scheduler fires hours late or not at all on a quiet repository (its first two
+scheduled runs were six hours late and it skipped whole days), so the schedule in the workflow is
+only a backup. The real trigger is a launchd agent on Alex's Mac, `launchd/com.icubasics.qotd.plist`,
+which runs `scripts/kick-post.sh` at 7:05 and 9:05 AM Chicago. The script calls
+`gh workflow run "Post Question of the Day" -f dry_run=false`; the workflow posts today's item once
+(the marker in `published/` prevents duplicates) and only from 7 AM Chicago onward, so extra kicks
+are harmless. launchd runs a missed job at the next wake, but a Mac that is shut down or offline at
+both times posts only if GitHub's own schedule happens to fire. Logs: `~/Library/Logs/icubasics-qotd.log`.
+
+Install on a new Mac: `cp launchd/com.icubasics.qotd.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.qotd.plist`
+(edit the script path in the plist first if the repo lives elsewhere). Test: `launchctl kickstart gui/$(id -u)/com.icubasics.qotd`.
+
