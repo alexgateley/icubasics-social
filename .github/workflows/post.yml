@@ -2,10 +2,14 @@ name: Post Question of the Day
 
 on:
   schedule:
-    # 7:00 AM America/Chicago is 12:00 UTC in summer and 13:00 UTC in winter.
-    # Both slots run; the script only posts when it is actually 7 AM in Chicago.
+    # 7:00 AM America/Chicago is 12:00 UTC in summer and 13:00 UTC in winter. GitHub often runs
+    # scheduled jobs hours late, so several slots are tried; the script posts at the first run that
+    # lands at or after 7 AM Chicago and the marker in published/ stops the later ones.
     - cron: '7 12 * * *'
     - cron: '7 13 * * *'
+    - cron: '37 13 * * *'
+    - cron: '7 15 * * *'
+    - cron: '7 17 * * *'
   workflow_dispatch:
     inputs:
       date:

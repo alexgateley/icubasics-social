@@ -69,8 +69,10 @@ async function checkAccess() {
 async function publishToday() {
   const now = localParts();
   const date = forcedDate || now.date;
-  if (!forcedDate && !dryRun && now.hour !== POST_HOUR) {
-    console.log(`It is ${now.hour}:00 in ${TZ}; posting happens at ${POST_HOUR}:00. Nothing to do.`);
+  // GitHub schedules often fire hours late, so post any time from POST_HOUR onward; the marker in
+  // published/ keeps a day from posting twice.
+  if (!forcedDate && !dryRun && now.hour < POST_HOUR) {
+    console.log(`It is ${now.hour}:00 in ${TZ}; posting happens from ${POST_HOUR}:00. Nothing to do.`);
     return;
   }
   const marker = path.join('published', `${date}.json`);
