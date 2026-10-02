@@ -13,7 +13,9 @@ posts/<date>-<exam>/1-question.jpg   slide 1
 posts/<date>-<exam>/2-answer.jpg     slide 2
 posts/<date>-<exam>/caption.txt      caption with hashtags
 posts/index.json                     date → folder
+posts/<date>-<exam>/reel.mp4         the same question as a 34-second Reel (optional)
 published/<date>.json                written by the job after posting (prevents double posts)
+published/<date>-reel.json           the same for the Reel
 posts-rn/..., published-rn/...       the same for RN Basics (NCLEX questions, @rnbasicsnclex)
 ```
 

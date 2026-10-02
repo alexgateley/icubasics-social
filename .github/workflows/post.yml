@@ -86,8 +86,10 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
         run: node scripts/publish.mjs
 
+      # Runs even when a post failed: the carousel may have gone out before the Reel failed, and its
+      # marker must be saved or the next run would post it again
       - name: Record what was posted
-        if: steps.creds.outputs.ready == 'true'
+        if: always() && steps.creds.outputs.ready == 'true'
         run: |
           git config user.name "icubasics-bot"
           git config user.email "icubasics-bot@users.noreply.github.com"
@@ -153,6 +155,7 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
         run: node scripts/publish.mjs
       - name: Record what was posted
+        if: always()
         run: |
           git config user.name "icubasics-bot"
           git config user.email "icubasics-bot@users.noreply.github.com"

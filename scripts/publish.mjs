@@ -1,6 +1,8 @@
-// Publishes today's Question of the Day carousel to Instagram through the Instagram API.
+// Publishes today's Question of the Day to Instagram through the Instagram API: the two-slide
+// carousel, and the Reel (reel.mp4) when the post folder has one. Each has its own marker file, so
+// a run posts whichever of the two is still missing.
 //
-//   node scripts/publish.mjs            # post today's carousel (only at 7 AM America/Chicago)
+//   node scripts/publish.mjs            # post today's carousel and Reel (from 7 AM America/Chicago)
 //   node scripts/publish.mjs refresh    # refresh the long-lived token, write it to new-token.txt
 //   node scripts/publish.mjs check      # verify the token, the account and the publishing quota
 //
@@ -11,6 +13,7 @@
 //   PAGES_BASE_URL    where posts/ is served, e.g. https://alexgateley.github.io/icubasics-social
 //   POST_DATE         optional YYYY-MM-DD to post a specific day and skip the time-of-day check
 //   DRY_RUN           "true" to log what would be posted without calling the API
+//   POST_REELS        "false" to post the carousel only
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -27,7 +30,10 @@ const brand = process.env.BRAND || 'icu';
 const postsDir = brand === 'icu' ? 'posts' : `posts-${brand}`;
 const publishedDir = brand === 'icu' ? 'published' : `published-${brand}`;
 
+const postReels = process.env.POST_REELS !== 'false';
+
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function api(endpoint, params = {}, method = 'POST') {
   const url = new URL(`${GRAPH}/${endpoint}`);
@@ -79,50 +85,99 @@ async function publishToday() {
     console.log(`It is ${now.hour}:00 in ${TZ}; posting happens from ${POST_HOUR}:00. Nothing to do.`);
     return;
   }
-  const marker = path.join(publishedDir, `${date}.json`);
-  if (fs.existsSync(marker)) {
-    console.log(`${date} was already posted (${marker}). Nothing to do.`);
-    return;
-  }
   const index = JSON.parse(fs.readFileSync(path.join(postsDir, 'index.json'), 'utf8'));
   const folder = index[date];
   if (!folder) {
     console.log(`No ${brand} post prepared for ${date}. Run push-month.sh in the app repo to add more days.`);
     return;
   }
+  if (!dryRun && (!token || !userId || !base)) fail('IG_ACCESS_TOKEN, IG_USER_ID and PAGES_BASE_URL must all be set');
   const caption = fs.readFileSync(path.join(postsDir, folder, 'caption.txt'), 'utf8').trim();
-  const slides = ['1-question.jpg', '2-answer.jpg'].map((f) => `${base}/${postsDir}/${folder}/${f}`);
-  console.log(`Posting ${brand} ${date} from ${folder}`);
-  slides.forEach((s) => console.log(`  ${s}`));
 
+  // The carousel and the Reel are independent: one failing must not stop the other, and whatever
+  // was posted keeps its marker so the next run only retries what is missing
+  const errors = [];
+  for (const [name, post] of [['carousel', postCarousel], ['reel', postReel]]) {
+    try {
+      await post({ date, folder, caption });
+    } catch (e) {
+      console.error(`ERROR (${name}): ${e.message}`);
+      errors.push(name);
+    }
+  }
+  if (errors.length) process.exit(1);
+}
+
+function writeMarker(marker, data) {
+  fs.mkdirSync(publishedDir, { recursive: true });
+  fs.writeFileSync(marker, JSON.stringify({ ...data, postedAt: new Date().toISOString() }, null, 2) + '\n');
+}
+
+async function assertReachable(url) {
+  const head = await fetch(url, { method: 'HEAD' });
+  if (!head.ok) throw new Error(`Not reachable (${head.status}): ${url}. Has GitHub Pages finished deploying?`);
+}
+
+/** Waits until Instagram has processed a media container. */
+async function waitForContainer(creationId, attempts, delayMs) {
+  for (let i = 0; i < attempts; i++) {
+    const { status_code: status } = await api(creationId, { fields: 'status_code' }, 'GET');
+    if (status === 'FINISHED') return;
+    if (status === 'ERROR' || status === 'EXPIRED') throw new Error(`Instagram reported ${status} while processing the upload`);
+    await sleep(delayMs);
+  }
+  throw new Error('Instagram did not finish processing the upload in time');
+}
+
+async function postCarousel({ date, folder, caption }) {
+  const marker = path.join(publishedDir, `${date}.json`);
+  if (fs.existsSync(marker)) {
+    console.log(`${date} carousel was already posted (${marker}).`);
+    return;
+  }
+  const slides = ['1-question.jpg', '2-answer.jpg'].map((f) => `${base}/${postsDir}/${folder}/${f}`);
+  console.log(`Posting ${brand} ${date} carousel from ${folder}`);
+  slides.forEach((s) => console.log(`  ${s}`));
   if (dryRun) { console.log('DRY RUN: not calling the API.'); return; }
-  if (!token || !userId || !base) fail('IG_ACCESS_TOKEN, IG_USER_ID and PAGES_BASE_URL must all be set');
 
   // Make sure the images are actually reachable before creating containers
-  for (const s of slides) {
-    const head = await fetch(s, { method: 'HEAD' });
-    if (!head.ok) fail(`Image not reachable (${head.status}): ${s}. Has GitHub Pages finished deploying?`);
-  }
-
+  for (const s of slides) await assertReachable(s);
   const children = [];
   for (const image_url of slides) {
     const { id } = await api(`${userId}/media`, { image_url, is_carousel_item: 'true' });
     children.push(id);
   }
   const { id: creationId } = await api(`${userId}/media`, { media_type: 'CAROUSEL', children: children.join(','), caption });
-
-  // The container is processed asynchronously; wait until it is ready
-  for (let i = 0; i < 20; i++) {
-    const { status_code: status } = await api(creationId, { fields: 'status_code' }, 'GET');
-    if (status === 'FINISHED') break;
-    if (status === 'ERROR') fail('Instagram reported an error processing the carousel');
-    await new Promise((r) => setTimeout(r, 3000));
-  }
+  await waitForContainer(creationId, 20, 3000);
   const { id: mediaId } = await api(`${userId}/media_publish`, { creation_id: creationId });
+  writeMarker(marker, { date, folder, mediaId });
+  console.log(`Published carousel: media id ${mediaId}`);
+}
 
-  fs.mkdirSync(publishedDir, { recursive: true });
-  fs.writeFileSync(marker, JSON.stringify({ date, folder, mediaId, postedAt: new Date().toISOString() }, null, 2) + '\n');
-  console.log(`Published: media id ${mediaId}`);
+async function postReel({ date, folder, caption }) {
+  if (!postReels) return;
+  if (!fs.existsSync(path.join(postsDir, folder, 'reel.mp4'))) {
+    console.log(`No Reel prepared for ${date} (${folder}/reel.mp4).`);
+    return;
+  }
+  const marker = path.join(publishedDir, `${date}-reel.json`);
+  if (fs.existsSync(marker)) {
+    console.log(`${date} Reel was already posted (${marker}).`);
+    return;
+  }
+  const video_url = `${base}/${postsDir}/${folder}/reel.mp4`;
+  // The carousel's caption tells people to swipe; the video shows the answer itself
+  const reelCaption = caption.replace(/^Swipe for the answer and the rationale.*$/m, 'You get 15 seconds, then the answer and the rationale ⏱️');
+  console.log(`Posting ${brand} ${date} Reel\n  ${video_url}`);
+  if (dryRun) { console.log('DRY RUN: not calling the API.'); return; }
+
+  await assertReachable(video_url);
+  const { id: creationId } = await api(`${userId}/media`, { media_type: 'REELS', video_url, caption: reelCaption, share_to_feed: 'true' });
+  // Video is transcoded before it can be published, which takes longer than images
+  await waitForContainer(creationId, 60, 5000);
+  const { id: mediaId } = await api(`${userId}/media_publish`, { creation_id: creationId });
+  writeMarker(marker, { date, folder, mediaId, kind: 'reel' });
+  console.log(`Published Reel: media id ${mediaId}`);
 }
 
 const mode = process.argv[2] ?? 'post';
