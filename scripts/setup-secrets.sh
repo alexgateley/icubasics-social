@@ -4,6 +4,7 @@
 #
 #   sh scripts/setup-secrets.sh        # @icubasics   (IG_USER_ID, IG_ACCESS_TOKEN)
 #   sh scripts/setup-secrets.sh rn     # @rnbasicsnclex (IG_USER_ID_RN, IG_ACCESS_TOKEN_RN)
+#   sh scripts/setup-secrets.sh medic  # @themedicbasics (IG_USER_ID_MEDIC, IG_ACCESS_TOKEN_MEDIC)
 #
 # It prompts for the Instagram user ID and the access token (the token is not echoed), then
 # optionally for a fine-grained GitHub personal access token (GH_PAT, shared by both accounts)
@@ -14,7 +15,8 @@ BRAND="${1:-icu}"
 case "$BRAND" in
   icu) SUFFIX=""; DEFAULT_ID=""; HANDLE="@icubasics" ;;
   rn)  SUFFIX="_RN"; DEFAULT_ID="17841429422921068"; HANDLE="@rnbasicsnclex" ;;
-  *) echo "Unknown brand '$BRAND' (icu or rn)"; exit 1 ;;
+  medic) SUFFIX="_MEDIC"; DEFAULT_ID=""; HANDLE="@themedicbasics" ;;
+  *) echo "Unknown brand '$BRAND' (icu, rn or medic)"; exit 1 ;;
 esac
 echo "Storing credentials for $HANDLE"
 if [ -n "$DEFAULT_ID" ]; then

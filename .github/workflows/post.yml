@@ -16,7 +16,7 @@ on:
       brand:
         description: 'Which account to post for'
         type: choice
-        options: [all, icu, rn]
+        options: [all, icu, rn, medic]
         default: all
       date:
         description: 'Post a specific date (YYYY-MM-DD) now, skipping the 7 AM check'
@@ -35,7 +35,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        brand: [icu, rn]
+        brand: [icu, rn, medic]
     # One job per account; the marker commit step below retries around the other job's push
     concurrency:
       group: post-qotd-${{ matrix.brand }}
@@ -49,8 +49,9 @@ jobs:
           node-version: 22
 
       # Each account has its own token and user id: IG_ACCESS_TOKEN / IG_USER_ID for @icubasics,
-      # IG_ACCESS_TOKEN_RN / IG_USER_ID_RN for @rnbasicsnclex. A brand whose secrets are not set yet
-      # is skipped with a notice instead of failing the run.
+      # IG_ACCESS_TOKEN_RN / IG_USER_ID_RN for @rnbasicsnclex, IG_ACCESS_TOKEN_MEDIC / IG_USER_ID_MEDIC
+      # for @themedicbasics. A brand whose secrets are not set yet is skipped with a notice instead
+      # of failing the run.
       - name: Select the account's credentials
         id: creds
         env:
@@ -58,8 +59,14 @@ jobs:
           ICU_USER: ${{ secrets.IG_USER_ID }}
           RN_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_RN }}
           RN_USER: ${{ secrets.IG_USER_ID_RN }}
+          MEDIC_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_MEDIC }}
+          MEDIC_USER: ${{ secrets.IG_USER_ID_MEDIC }}
         run: |
-          if [ "${{ matrix.brand }}" = "icu" ]; then TOKEN="$ICU_TOKEN"; USER="$ICU_USER"; NAME=IG_ACCESS_TOKEN; else TOKEN="$RN_TOKEN"; USER="$RN_USER"; NAME=IG_ACCESS_TOKEN_RN; fi
+          case "${{ matrix.brand }}" in
+            icu) TOKEN="$ICU_TOKEN"; USER="$ICU_USER"; NAME=IG_ACCESS_TOKEN ;;
+            rn) TOKEN="$RN_TOKEN"; USER="$RN_USER"; NAME=IG_ACCESS_TOKEN_RN ;;
+            medic) TOKEN="$MEDIC_TOKEN"; USER="$MEDIC_USER"; NAME=IG_ACCESS_TOKEN_MEDIC ;;
+          esac
           if [ -z "$TOKEN" ] || [ -z "$USER" ]; then
             echo "::notice::No credentials stored for ${{ matrix.brand }} yet (run scripts/setup-secrets.sh ${{ matrix.brand }}); skipping"
             echo "ready=false" >> "$GITHUB_OUTPUT"
@@ -121,7 +128,7 @@ jobs:
   post-one:
     # Manual run for a single account
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.brand == 'icu' || inputs.brand == 'rn') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.brand == 'icu' || inputs.brand == 'rn' || inputs.brand == 'medic') }}
     concurrency:
       group: post-qotd-${{ inputs.brand }}
       cancel-in-progress: false
@@ -136,8 +143,14 @@ jobs:
           ICU_USER: ${{ secrets.IG_USER_ID }}
           RN_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_RN }}
           RN_USER: ${{ secrets.IG_USER_ID_RN }}
+          MEDIC_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_MEDIC }}
+          MEDIC_USER: ${{ secrets.IG_USER_ID_MEDIC }}
         run: |
-          if [ "${{ inputs.brand }}" = "icu" ]; then TOKEN="$ICU_TOKEN"; USER="$ICU_USER"; else TOKEN="$RN_TOKEN"; USER="$RN_USER"; fi
+          case "${{ inputs.brand }}" in
+            icu) TOKEN="$ICU_TOKEN"; USER="$ICU_USER" ;;
+            rn) TOKEN="$RN_TOKEN"; USER="$RN_USER" ;;
+            medic) TOKEN="$MEDIC_TOKEN"; USER="$MEDIC_USER" ;;
+          esac
           [ -n "$TOKEN" ] && [ -n "$USER" ] || { echo "::error::No credentials stored for ${{ inputs.brand }} (run scripts/setup-secrets.sh ${{ inputs.brand }})"; exit 1; }
           echo "::add-mask::$TOKEN"
           echo "IG_ACCESS_TOKEN=$TOKEN" >> "$GITHUB_ENV"
