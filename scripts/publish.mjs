@@ -1,6 +1,8 @@
-// Publishes today's Question of the Day to Instagram through the Instagram API: the two-slide
-// carousel, and the Reel (reel.mp4) when the post folder has one. Each has its own marker file, so
-// a run posts whichever of the two is still missing.
+// Publishes today's Question of the Day to Instagram through the Instagram API: the Reel
+// (reel.mp4), and on Sundays the weekly recap carousel (recaps/<date>/: a cover plus the week's
+// answer slides). Since 2026-10-07 the daily two-slide carousel is no longer posted (Reels get the
+// reach; the recap keeps a saveable picture post once a week). Each post has its own marker file,
+// so a run posts whichever is still missing.
 //
 //   node scripts/publish.mjs            # post today's carousel and Reel (from 7 AM America/Chicago)
 //   node scripts/publish.mjs refresh    # refresh the long-lived token, write it to new-token.txt
@@ -135,14 +137,21 @@ async function waitForContainer(creationId, attempts, delayMs) {
   throw new Error('Instagram did not finish processing the upload in time');
 }
 
-async function postCarousel({ date, folder, caption }) {
-  const marker = path.join(publishedDir, `${date}.json`);
-  if (fs.existsSync(marker)) {
-    console.log(`${date} carousel was already posted (${marker}).`);
+async function postCarousel({ date }) {
+  const recapDir = path.join(postsDir, 'recaps', date);
+  if (!fs.existsSync(path.join(recapDir, 'slides.json'))) {
+    console.log(`No weekly recap for ${date} (recaps post on Sundays).`);
     return;
   }
-  const slides = ['1-question.jpg', '2-answer.jpg'].map((f) => `${base}/${postsDir}/${folder}/${f}`);
-  console.log(`Posting ${brand} ${date} carousel from ${folder}`);
+  const marker = path.join(publishedDir, `${date}.json`);
+  if (fs.existsSync(marker)) {
+    console.log(`${date} weekly recap was already posted (${marker}).`);
+    return;
+  }
+  const caption = fs.readFileSync(path.join(recapDir, 'caption.txt'), 'utf8').trim();
+  const slides = JSON.parse(fs.readFileSync(path.join(recapDir, 'slides.json'), 'utf8'))
+    .map((f) => `${base}/${postsDir}/recaps/${date}/${f}`);
+  console.log(`Posting ${brand} ${date} weekly recap (${slides.length} slides)`);
   slides.forEach((s) => console.log(`  ${s}`));
   if (dryRun) { console.log('DRY RUN: not calling the API.'); return; }
 
@@ -156,8 +165,8 @@ async function postCarousel({ date, folder, caption }) {
   const { id: creationId } = await api(`${userId}/media`, { media_type: 'CAROUSEL', children: children.join(','), caption });
   await waitForContainer(creationId, 20, 3000);
   const { id: mediaId } = await api(`${userId}/media_publish`, { creation_id: creationId });
-  writeMarker(marker, { date, folder, mediaId });
-  console.log(`Published carousel: media id ${mediaId}`);
+  writeMarker(marker, { date, mediaId, kind: 'recap' });
+  console.log(`Published weekly recap: media id ${mediaId}`);
 }
 
 async function postReel({ date, folder, caption }) {

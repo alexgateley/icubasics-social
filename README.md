@@ -85,3 +85,11 @@ The workflow posts them with `kind=feature` from 6 PM Chicago, with markers in
 
     cp launchd/com.icubasics.feature.plist ~/Library/LaunchAgents/
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.feature.plist
+
+## Weekly recap (Sundays)
+
+Since 2026-10-07 the daily two-slide carousel is no longer posted; the morning job posts only the
+Question of the Day Reel. On Sundays it also posts a weekly recap carousel from
+`posts*/recaps/<date>/` (0-cover.jpg plus the week's seven answer slides, caption.txt, slides.json),
+made in the QuizApp repo by `scripts/social/recap.sh <brand> <first Sunday> <last Sunday>`
+(push-month.sh runs it for every Sunday in a new run). Its marker is `published*/<date>.json`.
