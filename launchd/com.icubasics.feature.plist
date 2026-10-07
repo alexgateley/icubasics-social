@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Kicks the evening feature Reel at 6:05 and 8:05 PM Chicago (4:05 and 6:05 PM Pacific). The
+       workflow posts from 6 PM Chicago and never twice in a day.
+       Install: cp launchd/com.icubasics.feature.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.feature.plist -->
+  <key>Label</key>
+  <string>com.icubasics.feature</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>/Users/alex/.gemini/antigravity-ide/scratch/icubasics-social/scripts/kick-post.sh</string>
+    <string>feature</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Hour</key>
+      <integer>16</integer>
+      <key>Minute</key>
+      <integer>5</integer>
+    </dict>
+    <dict>
+      <key>Hour</key>
+      <integer>18</integer>
+      <key>Minute</key>
+      <integer>5</integer>
+    </dict>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-feature.launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-feature.launchd.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

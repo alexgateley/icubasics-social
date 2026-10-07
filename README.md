@@ -73,3 +73,15 @@ both times posts only if GitHub's own schedule happens to fire. Logs: `~/Library
 Install on a new Mac: `cp launchd/com.icubasics.qotd.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.qotd.plist`
 (edit the script path in the plist first if the repo lives elsewhere). Test: `launchctl kickstart gui/$(id -u)/com.icubasics.qotd`.
 
+
+## Evening feature Reels
+
+A second daily Reel shows one app feature (rhythm drill, case studies, mock exams and so on). The
+videos are made in the QuizApp repo (`scripts/social/features.sh <brand>`, then
+`scripts/social/push-features.sh <brand> <first date> <days>`) and live in `features/<brand>/<id>/`
+with `reel.mp4` and `caption.txt`; `features/<brand>/schedule.json` maps each date to a feature.
+The workflow posts them with `kind=feature` from 6 PM Chicago, with markers in
+`published*/<date>-feature.json`. A second launch agent kicks it at 6:05 and 8:05 PM Chicago:
+
+    cp launchd/com.icubasics.feature.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.feature.plist

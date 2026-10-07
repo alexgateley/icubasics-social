@@ -21,6 +21,11 @@ on:
       date:
         description: 'Post a specific date (YYYY-MM-DD) now, skipping the 7 AM check'
         required: false
+      kind:
+        description: 'qotd = Question of the Day (7 AM), feature = evening feature Reel (6 PM)'
+        type: choice
+        options: [qotd, feature]
+        default: qotd
       dry_run:
         description: 'Only log what would be posted'
         type: boolean
@@ -38,7 +43,7 @@ jobs:
         brand: [icu, rn, medic]
     # One job per account; the marker commit step below retries around the other job's push
     concurrency:
-      group: post-qotd-${{ matrix.brand }}
+      group: post-${{ matrix.brand }}
       cancel-in-progress: false
     if: ${{ github.event_name == 'schedule' || inputs.brand == 'all' || inputs.brand == '' }}
     steps:
@@ -91,6 +96,7 @@ jobs:
           PAGES_BASE_URL: https://alexgateley.github.io/icubasics-social
           POST_DATE: ${{ inputs.date }}
           DRY_RUN: ${{ inputs.dry_run }}
+          KIND: ${{ inputs.kind || 'qotd' }}
         run: node scripts/publish.mjs
 
       # Runs even when a post failed: the carousel may have gone out before the Reel failed, and its
@@ -130,7 +136,7 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event_name == 'workflow_dispatch' && (inputs.brand == 'icu' || inputs.brand == 'rn' || inputs.brand == 'medic') }}
     concurrency:
-      group: post-qotd-${{ inputs.brand }}
+      group: post-${{ inputs.brand }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@v4
@@ -166,6 +172,7 @@ jobs:
           PAGES_BASE_URL: https://alexgateley.github.io/icubasics-social
           POST_DATE: ${{ inputs.date }}
           DRY_RUN: ${{ inputs.dry_run }}
+          KIND: ${{ inputs.kind || 'qotd' }}
         run: node scripts/publish.mjs
       - name: Record what was posted
         if: always()
