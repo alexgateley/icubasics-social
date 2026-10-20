@@ -41,6 +41,13 @@ const FEATURE_HOUR = 18;
 const featuresDir = `features/${brand}`;
 
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
+// Instagram allows at most 5 hashtags per post (since Dec 2025); keep the first 5 if a caption has more
+const readCaption = (file) => {
+  const lines = fs.readFileSync(file, 'utf8').trim().split('\n');
+  const last = lines[lines.length - 1];
+  if (last.startsWith('#')) lines[lines.length - 1] = last.split(/\s+/).filter((t) => t.startsWith('#')).slice(0, 5).join(' ');
+  return lines.join('\n');
+};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function api(endpoint, params = {}, method = 'POST') {
@@ -100,7 +107,7 @@ async function publishToday() {
     return;
   }
   if (!dryRun && (!token || !userId || !base)) fail('IG_ACCESS_TOKEN, IG_USER_ID and PAGES_BASE_URL must all be set');
-  const caption = fs.readFileSync(path.join(postsDir, folder, 'caption.txt'), 'utf8').trim();
+  const caption = readCaption(path.join(postsDir, folder, 'caption.txt'));
 
   // The carousel and the Reel are independent: one failing must not stop the other, and whatever
   // was posted keeps its marker so the next run only retries what is missing
@@ -148,7 +155,7 @@ async function postCarousel({ date }) {
     console.log(`${date} weekly recap was already posted (${marker}).`);
     return;
   }
-  const caption = fs.readFileSync(path.join(recapDir, 'caption.txt'), 'utf8').trim();
+  const caption = readCaption(path.join(recapDir, 'caption.txt'));
   const slides = JSON.parse(fs.readFileSync(path.join(recapDir, 'slides.json'), 'utf8'))
     .map((f) => `${base}/${postsDir}/recaps/${date}/${f}`);
   console.log(`Posting ${brand} ${date} weekly recap (${slides.length} slides)`);
@@ -210,7 +217,7 @@ async function publishFeature() {
   const marker = path.join(publishedDir, `${date}-feature.json`);
   if (fs.existsSync(marker)) { console.log(`${date} feature Reel was already posted (${marker}).`); return; }
   if (!dryRun && (!token || !userId || !base)) fail('IG_ACCESS_TOKEN, IG_USER_ID and PAGES_BASE_URL must all be set');
-  const caption = fs.readFileSync(path.join(featuresDir, folder, 'caption.txt'), 'utf8').trim();
+  const caption = readCaption(path.join(featuresDir, folder, 'caption.txt'));
   const video_url = `${base}/${featuresDir}/${folder}/reel.mp4`;
   console.log(`Posting ${brand} ${date} feature Reel (${folder})\n  ${video_url}`);
   if (dryRun) { console.log('DRY RUN: not calling the API.'); return; }
