@@ -210,9 +210,7 @@ async function publishFeature() {
     console.log(`It is ${now.hour}:00 in ${TZ}; feature Reels post from ${FEATURE_HOUR}:00. Nothing to do.`);
     return;
   }
-  // Feature Reels get licensed music, which the API cannot add, so Alex posts them by hand from the
-  // Desktop folder (2026-10-20). Set FEATURE_AUTOPOST=true to post them automatically again.
-  if (process.env.FEATURE_AUTOPOST !== 'true') { console.log('Feature Reels are posted by hand (they get music). Nothing to do.'); return; }
+  // Feature Reels post automatically; Alex may re-post some with music from the Desktop folder (2026-10-21)
   const schedulePath = path.join(featuresDir, 'schedule.json');
   if (!fs.existsSync(schedulePath)) { console.log(`No feature Reels prepared for ${brand}.`); return; }
   const folder = JSON.parse(fs.readFileSync(schedulePath, 'utf8'))[date];
