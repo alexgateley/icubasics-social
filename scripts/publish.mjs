@@ -111,8 +111,15 @@ async function publishToday() {
 
   // The carousel and the Reel are independent: one failing must not stop the other, and whatever
   // was posted keeps its marker so the next run only retries what is missing
+  // Question Reels post on Tuesdays and Thursdays only (Alex, 2026-10-29: explainer shorts take Mon/Wed/Fri);
+  // the Sunday recap still posts. A forced POST_DATE posts its Reel on any day. QOTD_DAYS overrides (0 = Sunday).
+  const qotdDays = (process.env.QOTD_DAYS || '2,4').split(',').map(Number);
+  const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
+  const steps = [['carousel', postCarousel]];
+  if (forcedDate || qotdDays.includes(weekday)) steps.push(['reel', postReel]);
+  else console.log(`${date} is not a question day (QOTD_DAYS=${qotdDays.join(',')}); no question Reel today.`);
   const errors = [];
-  for (const [name, post] of [['carousel', postCarousel], ['reel', postReel]]) {
+  for (const [name, post] of steps) {
     try {
       await post({ date, folder, caption });
     } catch (e) {
