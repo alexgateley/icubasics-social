@@ -7,6 +7,7 @@
 # repository owner (gh auth status).
 #
 #   kick-post.sh            # Question of the Day (launchd/com.icubasics.qotd.plist)
+#   kick-post.sh short      # explainer short (launchd/com.icubasics.short.plist, noon and 2 PM Chicago)
 #   kick-post.sh feature    # evening feature Reel (launchd/com.icubasics.feature.plist, 6:05 and 8:05 PM Chicago)
 set -u
 KIND="${1:-qotd}"

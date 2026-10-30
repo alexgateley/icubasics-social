@@ -53,7 +53,7 @@ here, updates `index.json`, and pushes. The job picks them up on their dates.
 
 ## Notes
 
-- Since 2026-10-29 the question Reel posts on **Tuesdays and Thursdays only** (`QOTD_DAYS`, default `2,4`); explainer shorts (posted by Alex) take Monday, Wednesday and Friday. The 6 PM feature Reels keep posting daily until the prepared ones run out (they will not be remade), and the Sunday recap continues.
+- Since 2026-10-29 the question Reel posts on **Tuesdays and Thursdays only** (`QOTD_DAYS`, default `2,4`); explainer shorts take Monday, Wednesday and Friday (posted automatically at noon Chicago since 2026-10-30; see below). The 6 PM feature Reels keep posting daily until the prepared ones run out (they will not be remade), and the Sunday recap continues.
 - The job runs at 12:07 and 13:07 UTC; the script posts only when it is 7 AM in Chicago, which
   handles daylight saving time.
 - If a day has no folder in `index.json`, the job logs that and does nothing.
@@ -74,6 +74,22 @@ both times posts only if GitHub's own schedule happens to fire. Logs: `~/Library
 Install on a new Mac: `cp launchd/com.icubasics.qotd.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.qotd.plist`
 (edit the script path in the plist first if the repo lives elsewhere). Test: `launchctl kickstart gui/$(id -u)/com.icubasics.qotd`.
 
+
+## Explainer shorts (Mon/Wed/Fri, noon Chicago)
+
+The code-drawn explainer shorts from `~/Desktop/Social Media Uploads/<Topic>/` post on all three
+accounts. Schedule one with
+
+    node scripts/add-short.mjs "<Topic folder>" <YYYY-MM-DD> [slug]
+
+which copies each brand's `short - <Brand> Basics.mp4` to `shorts/<brand>/<slug>/reel.mp4`, takes
+that brand's INSTAGRAM REELS caption from `short - captions and tags.txt`, makes `cover.jpg` from
+`short - cover.png`, and adds the date to `shorts/<brand>/schedule.json`. Commit and push. The
+workflow posts it with `kind=short` from noon Chicago (markers `published*/<date>-short.json`); a
+launch agent kicks it at noon and 2 PM Chicago:
+
+    cp launchd/com.icubasics.short.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.short.plist
 
 ## Evening feature Reels
 

@@ -1,0 +1,9 @@
+Why is the MAP target 65? 🎯
+MAP = mean arterial pressure, the pressure driving blood into organs. Estimate it: DBP + ⅓ pulse pressure, or (SBP + 2 × DBP) ÷ 3. So 90/50 ≈ 63.
+Organs autoregulate: blood flow stays steady across a pressure range, then falls with pressure below a threshold (for kidneys, maybe near 65).
+Surviving Sepsis: initial MAP target 65 in septic shock on vasopressors. Higher targets (80–85) didn't lower deaths and came with more atrial fibrillation.
+MAP isn't the whole picture: check lactate, urine output, mentation and cap refill.
+Coming soon: our Sepsis and Vasopressors videos. Follow so you don't miss them.
+Save this for NCLEX.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#nclex #nursingstudent #nursingschool #sepsis #nurse

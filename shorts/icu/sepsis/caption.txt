@@ -1,0 +1,6 @@
+Sepsis: the first hour, by the Surviving Sepsis Campaign 🩸
+Lactate (suggested). Blood cultures as soon as possible, ideally before antimicrobials, without delaying them. Antimicrobials ideally within 1 h for septic shock or probable sepsis (possible sepsis without shock: rapid workup, within 3 h if concern persists).
+30 mL/kg crystalloid in the first 3 h for hypoperfusion: still a weak/conditional, low-certainty suggestion in SSC 2026; use adjusted or ideal body weight if BMI > 30. Balanced crystalloids preferred.
+Norepinephrine first, initial MAP target 65. qSOFA is not a stand-alone screen: NEWS, MEWS or SIRS preferred.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#sepsis #icunurse #ccrn #criticalcare #septicshock

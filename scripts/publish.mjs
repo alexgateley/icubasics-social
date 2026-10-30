@@ -8,6 +8,7 @@
 //   node scripts/publish.mjs refresh    # refresh the long-lived token, write it to new-token.txt
 //   node scripts/publish.mjs check      # verify the token, the account and the publishing quota
 //   KIND=feature node scripts/publish.mjs   # post today's feature Reel (from 6 PM America/Chicago)
+//   KIND=short node scripts/publish.mjs     # post today's explainer short (from noon America/Chicago)
 //
 // Environment:
 //   IG_ACCESS_TOKEN   long-lived token from the Meta app dashboard (Instagram API with Instagram Login)
@@ -18,7 +19,8 @@
 //   DRY_RUN           "true" to log what would be posted without calling the API
 //   POST_REELS        "false" to post the carousel only
 //   KIND              "feature" posts the evening feature Reel from features/<brand>/ (schedule.json maps
-//                     each date to a folder with reel.mp4 and caption.txt) instead of the Question of the Day
+//                     each date to a folder with reel.mp4 and caption.txt) instead of the Question of the Day;
+//                     "short" posts the explainer short from shorts/<brand>/ the same way (add with add-short.mjs)
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -38,6 +40,7 @@ const publishedDir = brand === 'icu' ? 'published' : `published-${brand}`;
 const postReels = process.env.POST_REELS !== 'false';
 const kind = process.env.KIND || 'qotd';
 const FEATURE_HOUR = 18;
+const SHORT_HOUR = 12;
 const featuresDir = `features/${brand}`;
 
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
@@ -209,34 +212,47 @@ async function postReel({ date, folder, caption }) {
   console.log(`Published Reel: media id ${mediaId}`);
 }
 
-// The evening feature Reel: a short screen recording of one app feature, rotated by date
-async function publishFeature() {
+// Reels posted from a dated schedule: the evening feature Reel (a short screen recording of one app
+// feature, from 6 PM) and the explainer short (Mon/Wed/Fri from noon, since 2026-10-30). Each lives in
+// <dir>/<brand>/<folder>/ with reel.mp4, caption.txt and optionally cover.jpg; <dir>/<brand>/schedule.json
+// maps each date to a folder.
+const SCHEDULED = {
+  feature: { dir: 'features', hour: FEATURE_HOUR, label: 'feature Reel' },
+  short: { dir: 'shorts', hour: SHORT_HOUR, label: 'explainer short' },
+};
+
+async function publishScheduled(kindName) {
+  const { dir, hour, label } = SCHEDULED[kindName];
   const now = localParts();
   const date = forcedDate || now.date;
-  if (!forcedDate && !dryRun && now.hour < FEATURE_HOUR) {
-    console.log(`It is ${now.hour}:00 in ${TZ}; feature Reels post from ${FEATURE_HOUR}:00. Nothing to do.`);
+  if (!forcedDate && !dryRun && now.hour < hour) {
+    console.log(`It is ${now.hour}:00 in ${TZ}; ${label}s post from ${hour}:00. Nothing to do.`);
     return;
   }
   // Feature Reels post automatically; Alex may re-post some with music from the Desktop folder (2026-10-21)
-  const schedulePath = path.join(featuresDir, 'schedule.json');
-  if (!fs.existsSync(schedulePath)) { console.log(`No feature Reels prepared for ${brand}.`); return; }
+  const brandDir = `${dir}/${brand}`;
+  const schedulePath = path.join(brandDir, 'schedule.json');
+  if (!fs.existsSync(schedulePath)) { console.log(`No ${label}s prepared for ${brand}.`); return; }
   const folder = JSON.parse(fs.readFileSync(schedulePath, 'utf8'))[date];
-  if (!folder) { console.log(`No ${brand} feature Reel scheduled for ${date}.`); return; }
-  const marker = path.join(publishedDir, `${date}-feature.json`);
-  if (fs.existsSync(marker)) { console.log(`${date} feature Reel was already posted (${marker}).`); return; }
+  if (!folder) { console.log(`No ${brand} ${label} scheduled for ${date}.`); return; }
+  const marker = path.join(publishedDir, `${date}-${kindName}.json`);
+  if (fs.existsSync(marker)) { console.log(`${date} ${label} was already posted (${marker}).`); return; }
   if (!dryRun && (!token || !userId || !base)) fail('IG_ACCESS_TOKEN, IG_USER_ID and PAGES_BASE_URL must all be set');
-  const caption = readCaption(path.join(featuresDir, folder, 'caption.txt'));
-  const video_url = `${base}/${featuresDir}/${folder}/reel.mp4`;
-  console.log(`Posting ${brand} ${date} feature Reel (${folder})\n  ${video_url}`);
-  if (dryRun) { console.log('DRY RUN: not calling the API.'); return; }
+  const caption = readCaption(path.join(brandDir, folder, 'caption.txt'));
+  const video_url = `${base}/${brandDir}/${folder}/reel.mp4`;
+  const params = { media_type: 'REELS', video_url, caption, share_to_feed: 'true' };
+  if (fs.existsSync(path.join(brandDir, folder, 'cover.jpg'))) params.cover_url = `${base}/${brandDir}/${folder}/cover.jpg`;
+  console.log(`Posting ${brand} ${date} ${label} (${folder})\n  ${video_url}`);
+  if (dryRun) { console.log(`DRY RUN: not calling the API.\n${caption}`); return; }
 
   await assertReachable(video_url);
-  const { id: creationId } = await api(`${userId}/media`, { media_type: 'REELS', video_url, caption, share_to_feed: 'true' });
+  if (params.cover_url) await assertReachable(params.cover_url);
+  const { id: creationId } = await api(`${userId}/media`, params);
   await waitForContainer(creationId, 60, 5000);
   const { id: mediaId } = await api(`${userId}/media_publish`, { creation_id: creationId });
-  writeMarker(marker, { date, folder, mediaId, kind: 'feature' });
-  console.log(`Published feature Reel: media id ${mediaId}`);
+  writeMarker(marker, { date, folder, mediaId, kind: kindName });
+  console.log(`Published ${label}: media id ${mediaId}`);
 }
 
 const mode = process.argv[2] ?? 'post';
-(mode === 'refresh' ? refreshToken() : mode === 'check' ? checkAccess() : kind === 'feature' ? publishFeature() : publishToday()).catch((e) => fail(e.message));
+(mode === 'refresh' ? refreshToken() : mode === 'check' ? checkAccess() : SCHEDULED[kind] ? publishScheduled(kind) : publishToday()).catch((e) => fail(e.message));

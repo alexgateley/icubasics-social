@@ -1,0 +1,8 @@
+MAP 65: where the number comes from 📈
+SSC 2021: initial MAP target 65 mmHg for septic shock on vasopressors (strong recommendation, moderate-quality evidence). It is an initial target, not a floor; individualize.
+SEPSISPAM (776 patients): 80–85 vs 65–70 gave no difference in 28- or 90-day mortality, more new atrial fibrillation; the chronic hypertension subgroup needed less RRT with the higher target.
+65 trial (patients 65+, vasodilatory hypotension): permissive 60–65 had similar 90-day mortality (41.0% vs 43.8%) with less vasopressor exposure.
+Renal autoregulation may fail closer to 65 than 80. Diastolic pressure is the upstream pressure for LV perfusion. MAP alone isn't perfusion: follow lactate, urine output, mentation and capillary refill.
+Coming soon: our Sepsis and Vasopressors videos. Follow so you don't miss them.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#icunurse #ccrn #criticalcare #septicshock #hemodynamics

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Kicks the explainer short at 12:05 and 2:05 PM Chicago (10:05 AM and 12:05 PM Pacific). The
+       workflow posts from noon Chicago, only on dates in shorts/<brand>/schedule.json, never twice.
+       Install: cp launchd/com.icubasics.short.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.short.plist -->
+  <key>Label</key>
+  <string>com.icubasics.short</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/sh</string>
+    <string>/Users/alex/.gemini/antigravity-ide/scratch/icubasics-social/scripts/kick-post.sh</string>
+    <string>short</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Hour</key>
+      <integer>10</integer>
+      <key>Minute</key>
+      <integer>5</integer>
+    </dict>
+    <dict>
+      <key>Hour</key>
+      <integer>12</integer>
+      <key>Minute</key>
+      <integer>5</integer>
+    </dict>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-short.launchd.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-short.launchd.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>

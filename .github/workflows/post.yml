@@ -22,9 +22,9 @@ on:
         description: 'Post a specific date (YYYY-MM-DD) now, skipping the 7 AM check'
         required: false
       kind:
-        description: 'qotd = Question of the Day (7 AM), feature = evening feature Reel (6 PM)'
+        description: 'qotd = Question of the Day (7 AM), short = explainer short (noon), feature = evening feature Reel (6 PM)'
         type: choice
-        options: [qotd, feature]
+        options: [qotd, short, feature]
         default: qotd
       dry_run:
         description: 'Only log what would be posted'
@@ -97,6 +97,16 @@ jobs:
           POST_DATE: ${{ inputs.date }}
           DRY_RUN: ${{ inputs.dry_run }}
           KIND: ${{ inputs.kind || 'qotd' }}
+        run: node scripts/publish.mjs
+
+      # GitHub's late-firing crons also try the noon explainer short (it posts only from noon Chicago,
+      # only on a scheduled date, and only once); the Mac kicks kind=short at noon and 2 PM Chicago
+      - name: Publish today's explainer short (scheduled runs)
+        if: github.event_name == 'schedule' && steps.creds.outputs.ready == 'true'
+        env:
+          BRAND: ${{ matrix.brand }}
+          PAGES_BASE_URL: https://alexgateley.github.io/icubasics-social
+          KIND: short
         run: node scripts/publish.mjs
 
       # Runs even when a post failed: the carousel may have gone out before the Reel failed, and its
