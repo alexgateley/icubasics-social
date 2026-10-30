@@ -1,0 +1,8 @@
+Shock types by hemodynamic profile 📉
+Hypovolemic: CO ↓, SVR ↑, CVP ↓. Tachycardia, cool pale skin, flat neck veins. Control bleeding; blood products for hemorrhage, crystalloid otherwise.
+Cardiogenic: CO ↓, SVR ↑, CVP/PCWP ↑. Cold and wet is the classic profile (about two-thirds of ischemic cardiogenic shock). Careful fluids, inotropes/vasopressors per orders, reperfusion when it's an MI.
+Distributive: CO ↑ or normal, SVR ↓, CVP ↓. Septic (antibiotics, crystalloid, norepinephrine), anaphylactic (IM epinephrine first), neurogenic (bradycardia, warm dry skin; fluids, pressors, atropine).
+Obstructive: CO ↓, SVR ↑, CVP ↑. Tension pneumothorax, tamponade, massive PE. Treat the obstruction: decompression, pericardiocentesis, thrombolysis or embolectomy. Remember shock can be mixed.
+Shock week recap: our Sepsis, Vasopressors and MAP 65 videos.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#icunurse #ccrn #criticalcare #shock #hemodynamics
