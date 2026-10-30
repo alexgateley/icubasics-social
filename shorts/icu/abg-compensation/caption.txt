@@ -1,0 +1,8 @@
+Compensated or not? ⚖️
+Uncompensated: the secondary value is still normal (anxiety: 7.53 / 30 / 24).
+Partially compensated: the secondary value moved, pH still out of range (diarrhea: 7.32 / 32 / 16; Winter's predicts 1.5 × 16 + 8 = 32 ± 2, so this is appropriate compensation).
+Fully compensated: pH back in range, both values abnormal (chronic COPD: 7.37 / 56 / 31).
+ICU reality: complete compensation is uncommon; most responses bring the pH only partway back. A normal pH with two very abnormal values should make you think mixed disorder.
+Ranges vary by lab. Full ABG video, with Winter's formula and the anion gap, on our YouTube channel.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#icunurse #criticalcare #ccrn #ABG #nursing

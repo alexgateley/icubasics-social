@@ -1,0 +1,8 @@
+Solve this ABG 🧪 Pause before the answer!
+Prolonged vomiting: pH 7.51, PaCO2 47, HCO3 36.
+pH up + HCO3 up = metabolic alkalosis (Metabolic Equal). PaCO2 up = respiratory compensation, pH still out of range → partially compensated metabolic alkalosis.
+ICU check: expected PaCO2 in metabolic alkalosis ≈ 0.7 × HCO3 + 21 (± 2) ≈ 46 (44 to 48), so 47 is appropriate compensation, not a second respiratory problem.
+Vomiting = chloride and acid loss; potassium often falls too. Check K+.
+Ranges vary by lab. Full ABG video on our YouTube channel.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#icunurse #criticalcare #ccrn #ABG #nursing
