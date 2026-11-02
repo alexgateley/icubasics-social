@@ -1,0 +1,10 @@
+Isotonic vs hypotonic vs hypertonic in the field 🚑
+Water moves toward more particles.
+Isotonic (normal saline, lactated Ringer's): no shift. The only bags for volume in the field: shock, trauma while blood is on the way, burns, per protocol.
+Hypotonic (half normal saline): water into cells, cells swell. Never for shock, never with a head injury.
+The trap: D5W reads isotonic in the bag, but the body burns the sugar and leaves water. It acts hypotonic, so it is not a volume fluid. Same idea for D10: a sugar source, not a bolus.
+Hypertonic (3% saline): water out of cells. For severe low sodium or raised intracranial pressure, slowly, in hospital or per your protocol.
+Crush injury: saline, not LR, because of the potassium (national model guidelines). Your local protocol decides which bag and how much.
+Full IV fluids video on our YouTube channel.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your protocols.
+#paramedic #ems #nremt #emt #IVfluids

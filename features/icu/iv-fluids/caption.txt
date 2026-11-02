@@ -1,0 +1,9 @@
+Isotonic vs hypotonic vs hypertonic: where does the water go? 💧
+Water moves toward more particles.
+Isotonic (0.9% saline 308 mOsm/L, lactated Ringer's 273, Plasma-Lyte A 294): no shift. Volume fluids.
+Hypotonic (0.45% saline, 154 mOsm/L): water into cells. Free water for hypernatremia, never for resuscitation, never with brain injury or raised ICP.
+The trap: D5W is about 250 mOsm/L in the bag, but once the dextrose is metabolized only water is left. It acts hypotonic; the label says it can become "extremely physiologically hypotonic."
+Hypertonic (3% saline, 513 mEq/L sodium, 1,027 mOsm/L): water out of cells. Severe symptomatic hyponatremia or raised ICP, in small boluses through a large vein per protocol. Chronic hyponatremia: raise sodium no more than about 8 mEq/L in 24 hours (Merck; guidelines 8 to 10) or risk osmotic demyelination.
+Full IV fluids video on our YouTube channel, with SMART, SALT-ED, BaSICS and PLUS.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#icunurse #criticalcare #ccrn #IVfluids #nursing
