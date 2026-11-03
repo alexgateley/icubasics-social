@@ -119,13 +119,17 @@ async function publishToday() {
   // Question Reels post on Tuesdays, Thursdays and weekends (explainer shorts take Mon/Wed/Fri; weekends added
   // 2026-11-02 so every account gets at least two videos a day with the 6 PM feature), plus any date listed for this
   // brand in qotd-extra-dates.json (a day whose short is missing). The Sunday recap still posts. A forced POST_DATE
-  // posts its Reel on any day. QOTD_DAYS overrides (0 = Sunday).
+  // posts its Reel on any day. QOTD_DAYS overrides (0 = Sunday). A brand listed in qotd-paused.json posts no
+  // question Reels at all (Alex paused them 2026-11-03); delete it from that list to resume.
   const qotdDays = (process.env.QOTD_DAYS || '0,2,4,6').split(',').map(Number);
   const weekday = new Date(`${date}T12:00:00Z`).getUTCDay();
   let extraDates = [];
   try { extraDates = JSON.parse(fs.readFileSync('qotd-extra-dates.json', 'utf8'))[brand] ?? []; } catch { /* no extra dates */ }
+  let paused = [];
+  try { paused = JSON.parse(fs.readFileSync('qotd-paused.json', 'utf8')); } catch { /* nothing paused */ }
   const steps = [['carousel', postCarousel]];
-  if (forcedDate || qotdDays.includes(weekday) || extraDates.includes(date)) steps.push(['reel', postReel]);
+  if (paused.includes(brand) && !forcedDate) console.log(`Question Reels are paused for ${brand} (qotd-paused.json).`);
+  else if (forcedDate || qotdDays.includes(weekday) || extraDates.includes(date)) steps.push(['reel', postReel]);
   else console.log(`${date} is not a question day (QOTD_DAYS=${qotdDays.join(',')}); no question Reel today.`);
   const errors = [];
   for (const [name, post] of steps) {
