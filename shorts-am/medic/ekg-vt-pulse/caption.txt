@@ -1,0 +1,4 @@
+🚑 NREMT EKG: VT, pulse or no pulse
+The pulse picks the algorithm. Unstable with a pulse gets a synchronized shock; follow your protocol.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#paramedic #nremt #ems #emt #paramedicstudent
