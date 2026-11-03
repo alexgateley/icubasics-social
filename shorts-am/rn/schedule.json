@@ -2,5 +2,10 @@
   "2026-11-05": "stemi-contiguous-leads",
   "2026-11-06": "stemi-inferior-nitro",
   "2026-11-07": "stemi-reciprocal",
-  "2026-11-08": "stemi-lbbb-sgarbossa"
+  "2026-11-08": "stemi-lbbb-sgarbossa",
+  "2026-11-09": "labs-lactate",
+  "2026-11-10": "labs-bun-creatinine",
+  "2026-11-11": "labs-troponin",
+  "2026-11-12": "labs-transfusion",
+  "2026-11-13": "labs-critical-potassium"
 }
