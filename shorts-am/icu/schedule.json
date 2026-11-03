@@ -13,5 +13,9 @@
   "2026-11-16": "ekg-afib-flutter",
   "2026-11-17": "ekg-svt-sinus",
   "2026-11-18": "ekg-vt-pulse",
-  "2026-11-19": "ekg-heart-blocks"
+  "2026-11-19": "ekg-heart-blocks",
+  "2026-11-20": "stroke-befast",
+  "2026-11-21": "stroke-last-known-well",
+  "2026-11-22": "stroke-glucose-first",
+  "2026-11-23": "stroke-blood-pressure"
 }
