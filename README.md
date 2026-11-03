@@ -110,3 +110,7 @@ Question of the Day Reel. On Sundays it also posts a weekly recap carousel from
 `posts*/recaps/<date>/` (0-cover.jpg plus the week's seven answer slides, caption.txt, slides.json),
 made in the QuizApp repo by `scripts/social/recap.sh <brand> <first Sunday> <last Sunday>`
 (push-month.sh runs it for every Sunday in a new run). Its marker is `published*/<date>.json`.
+
+## Afternoon explainer series (since 2026-11-02)
+
+A second explainer series posts from **3 PM Chicago** (kind `afternoon`), from `shorts-pm/<brand>/schedule.json`, alongside the noon series. Schedule with `SLOT=pm node scripts/add-short.mjs "<topic folder>" <date> [slug]`, then commit and push. The Mac kicks it at 3:05 and 5:05 PM Chicago (`launchd/com.icubasics.afternoon.plist`; install it like the other agents).

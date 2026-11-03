@@ -9,6 +9,7 @@
 //   node scripts/publish.mjs check      # verify the token, the account and the publishing quota
 //   KIND=feature node scripts/publish.mjs   # post today's feature Reel (from 6 PM America/Chicago)
 //   KIND=short node scripts/publish.mjs     # post today's explainer short (from noon America/Chicago)
+//   KIND=afternoon node scripts/publish.mjs # post today's afternoon explainer short (from 3 PM America/Chicago)
 //
 // Environment:
 //   IG_ACCESS_TOKEN   long-lived token from the Meta app dashboard (Instagram API with Instagram Login)
@@ -41,6 +42,7 @@ const postReels = process.env.POST_REELS !== 'false';
 const kind = process.env.KIND || 'qotd';
 const FEATURE_HOUR = 18;
 const SHORT_HOUR = 12;
+const AFTERNOON_HOUR = 15;
 const featuresDir = `features/${brand}`;
 
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
@@ -223,6 +225,8 @@ async function postReel({ date, folder, caption }) {
 const SCHEDULED = {
   feature: { dir: 'features', hour: FEATURE_HOUR, label: 'feature Reel' },
   short: { dir: 'shorts', hour: SHORT_HOUR, label: 'explainer short' },
+  // A second explainer series from 3 PM Chicago (Alex, 2026-11-02: two video series at once), from shorts-pm/<brand>/
+  afternoon: { dir: 'shorts-pm', hour: AFTERNOON_HOUR, label: 'afternoon explainer short' },
 };
 
 async function publishScheduled(kindName) {

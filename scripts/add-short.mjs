@@ -6,11 +6,13 @@
 // posts it with kind=short from noon Chicago on that date.
 //
 //   node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]
+//   SLOT=pm node scripts/add-short.mjs ...   # the afternoon series instead (shorts-pm/, posts from 3 PM Chicago)
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const [folderArg, date, slugArg] = process.argv.slice(2);
+const ROOT = process.env.SLOT === 'pm' ? 'shorts-pm' : 'shorts';
 if (!folderArg || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
   console.error('Usage: node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]');
   process.exit(1);
@@ -43,7 +45,7 @@ for (const brand of Object.keys(BRANDS)) {
   if (!fs.existsSync(video)) { console.log(`${brand}: no video in ${src}; skipped`); continue; }
   const cap = caption(brand);
   if (!cap) { console.log(`${brand}: no INSTAGRAM REELS caption found; skipped`); continue; }
-  const dest = path.join('shorts', brand, slug);
+  const dest = path.join(ROOT, brand, slug);
   fs.mkdirSync(dest, { recursive: true });
   fs.copyFileSync(video, path.join(dest, 'reel.mp4'));
   fs.writeFileSync(path.join(dest, 'caption.txt'), cap + '\n');
@@ -51,7 +53,7 @@ for (const brand of Object.keys(BRANDS)) {
   if (fs.existsSync(cover)) {
     execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '85', cover, '--out', path.join(dest, 'cover.jpg')], { stdio: 'ignore' });
   }
-  const schedulePath = path.join('shorts', brand, 'schedule.json');
+  const schedulePath = path.join(ROOT, brand, 'schedule.json');
   const schedule = fs.existsSync(schedulePath) ? JSON.parse(fs.readFileSync(schedulePath, 'utf8')) : {};
   schedule[date] = slug;
   const sorted = Object.fromEntries(Object.entries(schedule).sort(([a], [b]) => a.localeCompare(b)));
