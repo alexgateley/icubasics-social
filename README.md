@@ -53,7 +53,7 @@ here, updates `index.json`, and pushes. The job picks them up on their dates.
 
 ## Notes
 
-- Since 2026-10-29 the question Reel posts on **Tuesdays and Thursdays only** (`QOTD_DAYS`, default `2,4`); explainer shorts take Monday, Wednesday and Friday (posted automatically at noon Chicago since 2026-10-30; see below). The 6 PM feature Reels keep posting daily until the prepared ones run out (they will not be remade), and the Sunday recap continues.
+- Since 2026-10-29 the question Reel posts on **Tuesdays and Thursdays**, and since 2026-11-02 also on **Saturdays and Sundays** (`QOTD_DAYS`, default `0,2,4,6`), plus any date listed for a brand in `qotd-extra-dates.json` (used where a day's short is missing, so each account still gets two videos); explainer shorts take Monday, Wednesday and Friday (posted automatically at noon Chicago since 2026-10-30; see below). The 6 PM feature Reels keep posting daily until the prepared ones run out (they will not be remade), and the Sunday recap continues.
 - The job runs at 12:07 and 13:07 UTC; the script posts only when it is 7 AM in Chicago, which
   handles daylight saving time.
 - If a day has no folder in `index.json`, the job logs that and does nothing.
