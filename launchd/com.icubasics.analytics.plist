@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Pulls Instagram and YouTube analytics at 2:05 AM Pacific and rebuilds
+       ~/basics-growth-work/analytics/dashboard.html. Runs on this Mac only (insights are private and
+       the repository is public); credentials come from the login keychain. launchd runs a missed
+       calendar job at the next wake.
+       Install: cp launchd/com.icubasics.analytics.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.analytics.plist -->
+  <key>Label</key>
+  <string>com.icubasics.analytics</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/alex/.gemini/antigravity-ide/scratch/icubasics-social/scripts/analytics.mjs</string>
+  </array>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>2</integer>
+    <key>Minute</key>
+    <integer>5</integer>
+  </dict>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-analytics.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-analytics.log</string>
+  <key>RunAtLoad</key>
+  <false/>
+</dict>
+</plist>
