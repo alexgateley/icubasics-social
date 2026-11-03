@@ -231,6 +231,9 @@ const SCHEDULED = {
   short: { dir: 'shorts', hour: SHORT_HOUR, label: 'explainer short' },
   // A second explainer series from 3 PM Chicago (Alex, 2026-11-02: two video series at once), from shorts-pm/<brand>/
   afternoon: { dir: 'shorts-pm', hour: AFTERNOON_HOUR, label: 'afternoon explainer short' },
+  // Morning educational short from 7 AM Chicago, from shorts-am/<brand>/ (Alex, 2026-11-03: two education clips a day,
+  // one in the morning and one at noon, in place of the paused question Reels). It runs inside the qotd kick.
+  morning: { dir: 'shorts-am', hour: POST_HOUR, label: 'morning explainer short' },
 };
 
 async function publishScheduled(kindName) {
@@ -266,5 +269,13 @@ async function publishScheduled(kindName) {
   console.log(`Published ${label}: media id ${mediaId}`);
 }
 
+// The 7 AM run posts the morning short and then the question Reel and recap; one failing does not stop the other
+async function publishMorningAndToday() {
+  let failed = false;
+  try { await publishScheduled('morning'); } catch (e) { console.error(`ERROR (morning short): ${e.message}`); failed = true; }
+  await publishToday();
+  if (failed) process.exit(1);
+}
+
 const mode = process.argv[2] ?? 'post';
-(mode === 'refresh' ? refreshToken() : mode === 'check' ? checkAccess() : SCHEDULED[kind] ? publishScheduled(kind) : publishToday()).catch((e) => fail(e.message));
+(mode === 'refresh' ? refreshToken() : mode === 'check' ? checkAccess() : SCHEDULED[kind] ? publishScheduled(kind) : publishMorningAndToday()).catch((e) => fail(e.message));

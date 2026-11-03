@@ -7,12 +7,13 @@
 //
 //   node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]
 //   SLOT=pm node scripts/add-short.mjs ...   # the afternoon series instead (shorts-pm/, posts from 3 PM Chicago)
+//   SLOT=am node scripts/add-short.mjs ...   # the morning series (shorts-am/, posts from 7 AM Chicago)
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const [folderArg, date, slugArg] = process.argv.slice(2);
-const ROOT = process.env.SLOT === 'pm' ? 'shorts-pm' : 'shorts';
+const ROOT = { pm: 'shorts-pm', am: 'shorts-am' }[process.env.SLOT] ?? 'shorts';
 if (!folderArg || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
   console.error('Usage: node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]');
   process.exit(1);
