@@ -1,0 +1,4 @@
+🚑 NREMT drip math: mcg/kg/min
+One formula for every weight-based drip: dose × kg × 60 ÷ mcg/mL, then check it backward. Your protocol sets the range.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#paramedic #nremt #ems #criticalcareparamedic #paramedicstudent

@@ -17,5 +17,11 @@
   "2026-11-20": "stroke-befast",
   "2026-11-21": "stroke-last-known-well",
   "2026-11-22": "stroke-glucose-first",
-  "2026-11-23": "stroke-blood-pressure"
+  "2026-11-23": "stroke-blood-pressure",
+  "2026-11-24": "dosage-decimal",
+  "2026-11-25": "dosage-pounds-kg",
+  "2026-11-26": "dosage-drip-rates",
+  "2026-11-27": "dosage-epi-strengths",
+  "2026-11-28": "dosage-push-dose-epi",
+  "2026-11-29": "dosage-pressor-drip"
 }

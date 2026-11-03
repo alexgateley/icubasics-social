@@ -1,0 +1,4 @@
+💉 NCLEX dosage calc: mcg/kg/min to mL/hr
+Dose × kg × 60 ÷ mcg/mL. 0.1 × 80 × 60 ÷ 16 = 30 mL/hr. Round once, at the end.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#nursingstudent #nclex #nclexprep #dosagecalculation #nursingschool

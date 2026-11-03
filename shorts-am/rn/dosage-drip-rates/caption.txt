@@ -1,0 +1,4 @@
+💉 NCLEX dosage calc: drops per minute
+mL × drop factor ÷ minutes. 1,000 mL over 8 h on 15 gtt/mL = 31 gtt/min. On 60 gtt/mL tubing, gtt/min = mL/hr.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#nursingstudent #nclex #nclexprep #dosagecalculation #nursingschool
