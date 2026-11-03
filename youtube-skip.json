@@ -1,0 +1,33 @@
+{
+  "note": "RN shorts Alex uploaded or hand-scheduled on @TheRNBasics himself (~/Desktop/youtube_schedule_log.md, through 2026-11-27). scripts/youtube.mjs never uploads a slug listed here. videoId is used by scripts/analytics.mjs to match the video to its topic.",
+  "shorts": {
+    "vasopressors": { "youtube": "2026-10-28", "videoId": "", "title": "How Vasopressors Raise Blood Pressure (Norepinephrine Explained) #shorts" },
+    "map-65": { "youtube": "2026-10-31", "videoId": "8L3QDFdej5s", "title": "MAP 65: Why That Number? (Formula, Autoregulation, SEPSISPAM, 65 Trial) #shorts" },
+    "sodium": { "youtube": "2026-11-02", "videoId": "6duwS_7yxpw", "title": "Low vs High Sodium: Why Fixing It Too Fast Is Dangerous (ODS & Cerebral Edema) #shorts" },
+    "refeeding-syndrome": { "youtube": "2026-11-03", "videoId": "M-IM334A7zo", "title": "Refeeding Syndrome: The Danger of Feeding a Starving Patient #shorts" },
+    "potassium": { "youtube": "2026-11-04", "videoId": "Qq9GIY8EAAk", "title": "High vs Low Potassium: What Each Does to the Heart (EKG Changes) #shorts" },
+    "calcium-gluconate-vs-chloride": { "youtube": "2026-11-05", "videoId": "6-kyMOb4BcQ", "title": "Calcium Gluconate vs Calcium Chloride: Which One and Why #shorts" },
+    "calcium-phosphorus-magnesium": { "youtube": "2026-11-06", "videoId": "elGEcfGuvvo", "title": "Calcium, Phosphorus & Magnesium: 3 Small Numbers That Can Stop a Heart #shorts" },
+    "sepsis": { "youtube": "2026-11-09", "videoId": "KXQFz2yZSRo", "title": "Sepsis: Why the First Hour Matters (Lactate, Cultures, Antibiotics, Fluids, Norepi) #shorts" },
+    "sepsis-vs-septic-shock": { "youtube": "2026-11-10", "videoId": "k75QpZ-ITO0", "title": "Sepsis vs Septic Shock: The Difference in Under a Minute #shorts" },
+    "septic-shock-pressors": { "youtube": "2026-11-12", "videoId": "KX89ERnZGnY", "title": "Septic Shock Pressors: Norepinephrine First, and Don't Wait for a Central Line #shorts" },
+    "types-of-shock": { "youtube": "2026-11-13", "videoId": "eorE1Wn0Q7o", "title": "Types of Shock in 60 Seconds: Hypovolemic, Cardiogenic, Distributive, Obstructive #shorts" },
+    "abg-rome": { "youtube": "2026-11-16", "videoId": "mU8pohrvf18", "title": "ROME in 60 Seconds: The ABG Trick (Respiratory Opposite, Metabolic Equal) #shorts" },
+    "vomiting-vs-diarrhea-abg": { "youtube": "2026-11-17", "videoId": "B75lYdu8Wik", "title": "Vomiting vs Diarrhea: Acidosis or Alkalosis? ABG Memory Hook #shorts" },
+    "abg-compensation": { "youtube": "2026-11-18", "videoId": "SgeJKeuMBfU", "title": "Is This ABG Compensated? Uncompensated vs Partial vs Full (NCLEX) #shorts" },
+    "oxygen-on-the-abg": { "youtube": "2026-11-19", "videoId": "6nps7GguQVs", "title": "A Normal pH Can Hide Low Oxygen: Reading PaO2 on an ABG #shorts" },
+    "abg-practice": { "youtube": "2026-11-20", "videoId": "1sJPORgybng", "title": "Solve This ABG in 4 Steps: pH 7.51, PaCO2 47, HCO3 36 (NCLEX Practice) #shorts" },
+    "insulin-timing": { "youtube": "2026-11-23", "videoId": "A18PMzmmHso", "title": "Insulin Onset, Peak and Duration in 60 Seconds (NCLEX) #shorts" },
+    "dka-potassium-before-insulin": { "youtube": "2026-11-24", "videoId": "pFELnl1WySc", "title": "DKA: Why Potassium Comes Before Insulin #shorts" },
+    "dka-vs-hhs": { "youtube": "2026-11-25", "videoId": "IUYAFShPYcs", "title": "DKA vs HHS: The Storm and the Drought (NCLEX) #shorts" },
+    "dka-glucose-before-acid": { "youtube": "2026-11-26", "videoId": "EDaL2Wmxunk", "title": "DKA: Glucose Falls First, So Keep the Insulin Running #shorts" },
+    "low-blood-sugar": { "youtube": "2026-11-27", "videoId": "rOpGajV7oM0", "title": "Treating Low Blood Sugar: The Rule of 15 (NCLEX) #shorts" }
+  },
+  "long": {
+    "electrolytes": { "youtube": "2026-11-02", "videoId": "wgaOkY_uTjc", "title": "Electrolytes Explained: Sodium, Potassium, Calcium, Phos & Magnesium" },
+    "sepsis-long": { "youtube": "2026-11-09", "videoId": "kQV0602plhk", "title": "Sepsis Explained: Hour-1 Bundle, qSOFA, Lactate & Septic Shock" },
+    "abgs": { "youtube": "2026-11-16", "videoId": "QJFRmxVnDAQ", "title": "ABG Interpretation in 4 Steps: ROME Method (NCLEX)" },
+    "insulin-and-dka": { "youtube": "2026-11-23", "videoId": "BRyjDyM43Mc", "title": "Insulin and DKA Explained: Types, Lows, DKA vs HHS (NCLEX)" },
+    "vasopressors-long": { "youtube": "2026-10-28", "videoId": "", "title": "Vasopressors Made Simple: Receptors, Drugs and MAP Targets" }
+  }
+}

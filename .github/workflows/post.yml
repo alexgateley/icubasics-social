@@ -118,6 +118,24 @@ jobs:
           KIND: afternoon
         run: node scripts/publish.mjs
 
+      # RN Basics only: the RN short that just posted to Instagram (noon series, or the 7 AM morning series)
+      # also goes up to the @TheRNBasics YouTube channel as a Short (scripts/youtube.mjs; markers in
+      # published-youtube/). It skips with a notice until the YT_* secrets exist, and a YouTube failure
+      # never fails the Instagram job or blocks the marker commit below. It also runs after a failed post:
+      # it uploads only shorts whose Instagram marker exists.
+      - name: Upload the RN short to YouTube
+        if: ${{ !cancelled() && matrix.brand == 'rn' && steps.creds.outputs.ready == 'true' }}
+        continue-on-error: true
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          POST_DATE: ${{ inputs.date }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = "true" ] && [ -n "$YT_REFRESH_TOKEN" ]; then node scripts/youtube.mjs check; fi
+          node scripts/youtube.mjs
+
       # Runs even when a post failed: the carousel may have gone out before the Reel failed, and its
       # marker must be saved or the next run would post it again
       - name: Record what was posted
@@ -193,6 +211,18 @@ jobs:
           DRY_RUN: ${{ inputs.dry_run }}
           KIND: ${{ inputs.kind || 'qotd' }}
         run: node scripts/publish.mjs
+      - name: Upload the RN short to YouTube
+        if: ${{ !cancelled() && inputs.brand == 'rn' }}
+        continue-on-error: true
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          POST_DATE: ${{ inputs.date }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          if [ "$DRY_RUN" = "true" ] && [ -n "$YT_REFRESH_TOKEN" ]; then node scripts/youtube.mjs check; fi
+          node scripts/youtube.mjs
       - name: Record what was posted
         if: always()
         run: |

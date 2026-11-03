@@ -5,22 +5,48 @@
 // example Vasopressors has no Medic version) is skipped. Commit and push afterwards; the workflow
 // posts it with kind=short from noon Chicago on that date.
 //
+// For RN Basics it also writes youtube.json (title and description from the file's YOUTUBE SHORTS
+// part), which scripts/youtube.mjs uploads to @TheRNBasics once the Instagram Reel has posted. A topic
+// without a YouTube part gets no youtube.json and is not uploaded.
+//
 //   node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]
 //   SLOT=pm node scripts/add-short.mjs ...   # the afternoon series instead (shorts-pm/, posts from 3 PM Chicago)
 //   SLOT=am node scripts/add-short.mjs ...   # the morning series (shorts-am/, posts from 7 AM Chicago)
+//   YOUTUBE_ONLY=1 [SLOT=am] node scripts/add-short.mjs "<topic folder>" <slug>
+//                                            # only (re)write youtube.json for a short scheduled earlier
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { parseYouTube, checkYouTube } from './youtube-text.mjs';
 
-const [folderArg, date, slugArg] = process.argv.slice(2);
+const youtubeOnly = process.env.YOUTUBE_ONLY === '1';
+const args = process.argv.slice(2);
+const [folderArg, date, slugArg] = youtubeOnly ? [args[0], null, args[1]] : args;
 const ROOT = { pm: 'shorts-pm', am: 'shorts-am' }[process.env.SLOT] ?? 'shorts';
-if (!folderArg || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
-  console.error('Usage: node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]');
+if (!folderArg || (youtubeOnly ? !slugArg : !/^\d{4}-\d{2}-\d{2}$/.test(date ?? ''))) {
+  console.error('Usage: node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]\n       YOUTUBE_ONLY=1 node scripts/add-short.mjs "<topic folder>" <slug>');
   process.exit(1);
 }
 const src = path.isAbsolute(folderArg) ? folderArg : path.join(process.env.HOME, 'Desktop/Social Media Uploads', folderArg);
 const slug = slugArg || path.basename(src).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const text = fs.readFileSync(path.join(src, 'short - captions and tags.txt'), 'utf8');
+
+/** Writes youtube.json next to the RN reel, or explains why not (a missing file means no YouTube upload). */
+function writeYouTube(dest) {
+  const yt = parseYouTube(text);
+  if (!yt) { console.log('rn: no YOUTUBE SHORTS part in the captions file; it will not upload to YouTube'); return; }
+  const problems = checkYouTube(yt);
+  if (problems.length) { console.log(`rn: youtube.json NOT written (${problems.join('; ')}); fix the captions file and rerun with YOUTUBE_ONLY=1`); return; }
+  fs.writeFileSync(path.join(dest, 'youtube.json'), JSON.stringify(yt, null, 2) + '\n');
+  console.log(`rn: youtube.json → ${dest} (${yt.title})`);
+}
+
+if (youtubeOnly) {
+  const dest = path.join(ROOT, 'rn', slug);
+  if (!fs.existsSync(path.join(dest, 'reel.mp4'))) { console.error(`No scheduled RN short at ${dest}`); process.exit(1); }
+  writeYouTube(dest);
+  process.exit(0);
+}
 
 const BRANDS = { rn: 'RN', icu: 'ICU', medic: 'MEDIC' };
 const NAMES = { rn: 'RN Basics', icu: 'ICU Basics', medic: 'Medic Basics' };
@@ -50,6 +76,7 @@ for (const brand of Object.keys(BRANDS)) {
   fs.mkdirSync(dest, { recursive: true });
   fs.copyFileSync(video, path.join(dest, 'reel.mp4'));
   fs.writeFileSync(path.join(dest, 'caption.txt'), cap + '\n');
+  if (brand === 'rn') writeYouTube(dest);
   const cover = path.join(src, 'short - cover.png');
   if (fs.existsSync(cover)) {
     execFileSync('sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '85', cover, '--out', path.join(dest, 'cover.jpg')], { stdio: 'ignore' });
