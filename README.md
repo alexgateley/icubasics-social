@@ -162,15 +162,17 @@ review texts and the demo-video script: [docs/tiktok-audit.md](docs/tiktok-audit
 Instagram insights are private and this repository is public, so analytics never run in Actions and
 nothing is committed here. `scripts/analytics.mjs` runs nightly on Alex's Mac
 (`launchd/com.icubasics.analytics.plist`, 2:05 AM Pacific) with credentials from the login keychain
-(`scripts/setup-keychain.sh <brand>` for Instagram, `scripts/setup-youtube.sh` for YouTube). It reads
-per-Reel insights for the three accounts (views, reach, saved, shares, likes, comments,
+(`scripts/setup-keychain.sh <account>` or `all` for Instagram, `scripts/setup-youtube.sh` for YouTube). It reads
+per-Reel insights for every Instagram account with a keychain token (icu, rn, medic, rhea, winery,
+franchifi, gripwheels; the others are skipped with a note) (views, reach, saved, shares, likes, comments,
 total_interactions, ig_reels_avg_watch_time, ig_reels_video_view_total_time), follower counts, and
 per-video YouTube Analytics (views, estimatedMinutesWatched, averageViewDuration, likes,
 subscribersGained), appends them to `~/basics-growth-work/analytics/*.jsonl`, and rebuilds
 `~/basics-growth-work/analytics/dashboard.html` (followers over time, top 10 this week, every Reel
 and Short with filters by account, topic and slot). Topics and slots come from the markers in
 `published*/`, YouTube topics from the scheduler's `uploaded.json`. It refreshes its own keychain
-copy of each Instagram token weekly.
+copy of each Instagram token weekly and records the date in `state.json` (`igTokens`), which the
+Basics Social Mac app shows.
 
     node scripts/analytics.mjs                 # fetch and rebuild the dashboard
     node scripts/analytics.mjs dashboard       # rebuild only

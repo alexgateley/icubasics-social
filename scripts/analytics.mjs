@@ -1,4 +1,5 @@
-// Nightly analytics for the three Instagram accounts and the @TheRNBasics YouTube channel. Runs ONLY on
+// Nightly analytics for Alex's seven Instagram accounts (the three Basics ones, @runonrhea, @thewinerybooks,
+// @franchifi, @griptheorywheels) and the @TheRNBasics YouTube channel. Runs ONLY on
 // Alex's Mac (launchd/com.icubasics.analytics.plist, 2 AM Pacific): insights are private and this
 // repository is public, so nothing here writes into the repository. Credentials come from the login
 // keychain (scripts/setup-keychain.sh, scripts/setup-youtube.sh); every API call is a read.
@@ -12,7 +13,9 @@
 //   accounts.jsonl   one line per account per night: followers (Instagram followers_count, YouTube subscriberCount)
 //   media.jsonl      one line per Reel or video per night with its lifetime totals
 //   media-meta.json  per Reel or video: account, posted time, title, permalink, topic, slot
-//   state.json       when each keychain Instagram token was last refreshed (no secrets)
+//   state.json       no secrets: per Instagram account the keychain token's last refresh and expiry
+//                    (igTokens.<account>.refreshedAt / expiresAt; igRefreshedAt is the older copy of refreshedAt)
+//                    and how the last fetch went (igAccounts.<account>.status: ok, missing (no token), error)
 //   dashboard.html   static page built from the above
 //
 // Metric names checked against the docs on 2026-11-03:
@@ -39,10 +42,17 @@ const fixtures = process.env.FIXTURES === '1';
 const INSIGHTS_DAYS = Number(process.env.INSIGHTS_DAYS || 120);
 const REFRESH_DAYS = 7;
 
+// Keychain names IG_USER_ID<suffix> / IG_ACCESS_TOKEN<suffix> (sh scripts/setup-keychain.sh <account>).
+// userId is the account's Instagram user ID (not secret), used when the keychain has a token but no ID.
+// Keep in step with info() in setup-keychain.sh.
 const IG_ACCOUNTS = [
-  { account: 'icu', label: '@icubasics', suffix: '' },
-  { account: 'rn', label: '@rnbasicsnclex', suffix: '_RN' },
-  { account: 'medic', label: '@themedicbasics', suffix: '_MEDIC' },
+  { account: 'icu', label: '@icubasics', suffix: '', userId: '17841423460793482' },
+  { account: 'rn', label: '@rnbasicsnclex', suffix: '_RN', userId: '17841429422921068' },
+  { account: 'medic', label: '@themedicbasics', suffix: '_MEDIC', userId: '17841420840594491' },
+  { account: 'rhea', label: '@runonrhea', suffix: '_RHEA', userId: '17841426819974871' },
+  { account: 'winery', label: '@thewinerybooks', suffix: '_WINERY', userId: '17841433053134440' },
+  { account: 'franchifi', label: '@franchifi', suffix: '_FRANCHIFI', userId: '17841451921105656' },
+  { account: 'gripwheels', label: '@griptheorywheels', suffix: '_GRIPWHEELS', userId: '17841425472380435' },
 ];
 const IG_METRICS = ['views', 'reach', 'saved', 'shares', 'likes', 'comments', 'total_interactions', 'ig_reels_avg_watch_time', 'ig_reels_video_view_total_time'];
 const YT_METRICS = ['views', 'estimatedMinutesWatched', 'averageViewDuration', 'likes', 'subscribersGained'];
@@ -71,12 +81,14 @@ async function ig(token, endpoint, params = {}) {
 
 /** Refreshes the keychain copy of a long-lived token once a week so it never reaches its 60 days. */
 async function maybeRefresh(acct, token, state) {
-  const last = state.igRefreshedAt?.[acct.account];
+  const last = state.igTokens?.[acct.account]?.refreshedAt ?? state.igRefreshedAt?.[acct.account];
   if (last && Date.now() - Date.parse(last) < REFRESH_DAYS * 86400000) return token;
   try {
     const json = await ig(token, 'refresh_access_token', { grant_type: 'ig_refresh_token' });
     writeSecret(`IG_ACCESS_TOKEN${acct.suffix}`, json.access_token);
-    (state.igRefreshedAt ??= {})[acct.account] = new Date().toISOString();
+    const at = new Date();
+    (state.igRefreshedAt ??= {})[acct.account] = at.toISOString();
+    (state.igTokens ??= {})[acct.account] = { refreshedAt: at.toISOString(), expiresAt: new Date(at.getTime() + (json.expires_in || 60 * 86400) * 1000).toISOString() };
     log(`${acct.label}: keychain token refreshed (${Math.round(json.expires_in / 86400)} days)`);
     return json.access_token;
   } catch (e) {
@@ -101,10 +113,19 @@ async function reelInsights(token, id) {
   }
 }
 
+/** Records how an account's last fetch went, for the Basics Social app's "needs setup" list. */
+function status(state, acct, value, message) {
+  (state.igAccounts ??= {})[acct.account] = { label: acct.label, status: value, checkedAt: new Date().toISOString(), message };
+}
+
 async function fetchInstagram(acct, state) {
-  const userId = readSecret(`IG_USER_ID${acct.suffix}`);
+  const userId = readSecret(`IG_USER_ID${acct.suffix}`) || acct.userId;
   let token = readSecret(`IG_ACCESS_TOKEN${acct.suffix}`);
-  if (!userId || !token) { log(`${acct.label}: not in the keychain (sh scripts/setup-keychain.sh ${acct.account || 'icu'}); skipped`); return null; }
+  if (!token) {
+    log(`${acct.label}: no token in the keychain (sh scripts/setup-keychain.sh ${acct.account}); skipped`);
+    status(state, acct, 'missing', `no token in the keychain: sh scripts/setup-keychain.sh ${acct.account}`);
+    return null;
+  }
   token = await maybeRefresh(acct, token, state);
   const profile = await ig(token, userId, { fields: 'username,followers_count,media_count' });
   const cutoff = Date.now() - INSIGHTS_DAYS * 86400000;
@@ -128,6 +149,7 @@ async function fetchInstagram(acct, state) {
     metas[m.id] = { platform: 'instagram', account: acct.account, posted: m.timestamp, permalink: m.permalink, title: (m.caption ?? '').split('\n')[0].slice(0, 120) };
   }
   log(`${acct.label}: ${profile.followers_count} followers, ${reels.length} Reels from the last ${INSIGHTS_DAYS} days${failed ? `, ${failed} with missing metrics` : ''}`);
+  status(state, acct, 'ok', `${reels.length} Reels${failed ? `, ${failed} with missing metrics` : ''}`);
   return { account: { date: today, platform: 'instagram', account: acct.account, followers: profile.followers_count, mediaCount: profile.media_count }, rows, metas };
 }
 
@@ -260,7 +282,7 @@ async function fetchAll() {
   const results = [];
   let errors = 0;
   for (const acct of IG_ACCOUNTS) {
-    try { const r = await fetchInstagram(acct, state); if (r) results.push(r); } catch (e) { errors++; log(`ERROR ${acct.label}: ${scrub(e.message)}`); }
+    try { const r = await fetchInstagram(acct, state); if (r) results.push(r); } catch (e) { errors++; log(`ERROR ${acct.label}: ${scrub(e.message)}`); status(state, acct, 'error', scrub(e.message)); }
   }
   try { const r = await fetchYouTube(); if (r) results.push(r); } catch (e) { errors++; log(`ERROR YouTube: ${scrub(e.message)}`); }
   const metas = save(results);
@@ -276,7 +298,12 @@ function writeFixtures() {
   fs.mkdirSync(DIR, { recursive: true });
   const topics = ['sodium', 'potassium', 'heparin-antidotes', 'sepsis', 'abg-rome', 'stemi-reciprocal', 'Question of the Day', 'rhythm-drill', 'dka-vs-hhs', 'types-of-shock'];
   const slots = ['noon', 'noon', 'noon', 'noon', 'noon', '7 AM', '7 AM', '6 PM', 'noon', '3 PM'];
-  const accounts = [...IG_ACCOUNTS.map((a) => ({ platform: 'instagram', account: a.account })), { platform: 'youtube', account: 'yt' }];
+  // FIXTURE_ACCOUNTS=icu,rn,rhea limits the made-up Instagram accounts (to see the app's "needs setup" list)
+  const only = process.env.FIXTURE_ACCOUNTS?.split(',');
+  const igFixture = IG_ACCOUNTS.filter((a) => !only || only.includes(a.account));
+  const accounts = [...igFixture.map((a) => ({ platform: 'instagram', account: a.account })), { platform: 'youtube', account: 'yt' }];
+  const baseFollowers = { icu: 420, rn: 1350, medic: 260, rhea: 610, winery: 180, franchifi: 95, gripwheels: 40, yt: 85 };
+  const growth = { icu: 6, rn: 14, medic: 4, rhea: 5, winery: 2, franchifi: 1, gripwheels: 1, yt: 3 };
   let seed = 7;
   const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const acc = [];
@@ -285,7 +312,7 @@ function writeFixtures() {
   for (let d = 30; d >= 0; d--) {
     const date = new Date(Date.parse(`${today}T12:00:00Z`) - d * 86400000).toISOString().slice(0, 10);
     accounts.forEach((a, ai) => {
-      acc.push({ date, ...a, followers: Math.round([420, 1350, 260, 85][ai] + (30 - d) * [6, 14, 4, 3][ai] + rand() * 5), mediaCount: 60 + 30 - d });
+      acc.push({ date, ...a, followers: Math.round(baseFollowers[a.account] + (30 - d) * growth[a.account] + rand() * 5), mediaCount: 60 + 30 - d });
       topics.forEach((t, ti) => {
         const id = `${a.account}-${ti}`;
         const age = 30 - d - ti * 3;
@@ -295,19 +322,30 @@ function writeFixtures() {
           ? { views: v, liveViews: v + 40, minutesWatched: Math.round(v * 0.6), avgViewDuration: 31 + ti, likes: Math.round(v / 25), subscribersGained: Math.round(v / 300) }
           : { views: v, reach: Math.round(v * 0.7), saved: Math.round(v / 40), shares: Math.round(v / 60), likes: Math.round(v / 20), comments: Math.round(v / 200), total_interactions: Math.round(v / 12), ig_reels_avg_watch_time: 9000 + ti * 800, ig_reels_video_view_total_time: v * 9000 };
         media.push({ date, ...a, id, ...row });
-        metas[id] = { platform: a.platform, account: a.account, posted: new Date(Date.parse(`${today}T17:00:00Z`) - (30 - ti * 3) * 86400000).toISOString(), title: `${t} (fixture)`, permalink: 'https://example.com/', topic: t, slot: a.platform === 'youtube' ? 'YouTube' : slots[ti] };
+        metas[id] = { platform: a.platform, account: a.account, posted: new Date(Date.parse(`${today}T17:00:00Z`) - (30 - ti * 3) * 86400000).toISOString(), title: ['icu', 'rn', 'medic', 'yt'].includes(a.account) ? `${t} (fixture)` : `${a.account} post ${ti + 1} (fixture)`, permalink: 'https://example.com/', topic: ['icu', 'rn', 'medic', 'yt'].includes(a.account) ? t : `${a.account} post ${ti + 1}`, slot: a.platform === 'youtube' ? 'YouTube' : slots[ti] };
       });
     });
   }
   fs.writeFileSync(file('accounts.jsonl'), acc.map((r) => JSON.stringify(r)).join('\n') + '\n');
   fs.writeFileSync(file('media.jsonl'), media.map((r) => JSON.stringify(r)).join('\n') + '\n');
   fs.writeFileSync(file('media-meta.json'), JSON.stringify(metas, null, 2) + '\n');
+  // Token state as analytics.mjs records it: a refresh four days ago for each made-up account
+  const state = {};
+  const at = Date.parse(`${today}T09:05:00Z`) - 4 * 86400000;
+  for (const a of IG_ACCOUNTS) {
+    if (igFixture.includes(a)) {
+      (state.igRefreshedAt ??= {})[a.account] = new Date(at).toISOString();
+      (state.igTokens ??= {})[a.account] = { refreshedAt: new Date(at).toISOString(), expiresAt: new Date(at + 60 * 86400000).toISOString() };
+      status(state, a, 'ok', `${topics.length} Reels (fixture)`);
+    } else status(state, a, 'missing', `no token in the keychain: sh scripts/setup-keychain.sh ${a.account}`);
+  }
+  fs.writeFileSync(file('state.json'), JSON.stringify(state, null, 2) + '\n');
   log(`Wrote fixture data to ${DIR}`);
 }
 
 // ---------- dashboard ----------
 
-const ACCOUNT_LABELS = { icu: '@icubasics', rn: '@rnbasicsnclex', medic: '@themedicbasics', yt: 'YouTube @TheRNBasics' };
+const ACCOUNT_LABELS = { ...Object.fromEntries(IG_ACCOUNTS.map((a) => [a.account, a.label])), yt: 'YouTube @TheRNBasics' };
 
 /** Each Reel or video with its latest totals and the totals about a week earlier (for "this week"). */
 function buildData() {

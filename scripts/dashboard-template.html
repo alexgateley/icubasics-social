@@ -12,6 +12,7 @@
     --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
     --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --up: #006300; --hover: rgba(11,11,11,0.04);
     --icu: #2a78d6; --rn: #eb6834; --medic: #1baf7a; --yt: #eda100;
+    --rhea: #4a7f3c; --winery: #8e2b56; --franchifi: #6a4fd0; --gripwheels: #5b6470;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -19,6 +20,7 @@
       --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
       --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --up: #0ca30c; --hover: rgba(255,255,255,0.05);
       --icu: #3987e5; --rn: #d95926; --medic: #199e70; --yt: #c98500;
+      --rhea: #6fa35f; --winery: #c4507f; --franchifi: #8f78e6; --gripwheels: #8d96a2;
     }
   }
   :root[data-theme="dark"] {
@@ -26,6 +28,7 @@
     --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
     --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --up: #0ca30c; --hover: rgba(255,255,255,0.05);
     --icu: #3987e5; --rn: #d95926; --medic: #199e70; --yt: #c98500;
+      --rhea: #6fa35f; --winery: #c4507f; --franchifi: #8f78e6; --gripwheels: #8d96a2;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -92,7 +95,7 @@
 <div class="tip" id="tip"></div>
 <script>
 const DATA = /*DATA*/null;
-const ACCOUNTS = ['icu', 'rn', 'medic', 'yt'];
+const ACCOUNTS = ['icu', 'rn', 'medic', 'rhea', 'winery', 'franchifi', 'gripwheels', 'yt'];
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => (n == null || Number.isNaN(n) ? '–' : Math.round(n).toLocaleString('en-US'));
 const color = (a) => `var(--${a})`;

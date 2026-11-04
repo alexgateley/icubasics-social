@@ -194,9 +194,8 @@ channel's record counts only its own spending.
 
 1. Store each Instagram account for the analytics job (read-only checks first; the token is hidden):
 
-       sh scripts/setup-keychain.sh        # @icubasics
-       sh scripts/setup-keychain.sh rn     # @rnbasicsnclex
-       sh scripts/setup-keychain.sh medic  # @themedicbasics
+       sh scripts/setup-keychain.sh all    # all seven in turn (Enter at a token prompt skips one)
+       sh scripts/setup-keychain.sh rn     # or one: icu, rn, medic, rhea, winery, franchifi, gripwheels
 
    Use the same token as the posting job or generate a fresh one in the Meta dashboard (Instagram →
    API setup with Instagram business login → Generate token). It needs the
