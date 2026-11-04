@@ -143,6 +143,53 @@ publish time. It skips a video that is already public, not scheduled, not found,
 YouTube does not match the table, and prints the time YouTube shows after each save. A video already
 at its new time is left alone, so running it twice is harmless.
 
+## 7b. The second channel: @Rheafi
+
+The scheduler also uploads to Rhea's channel, **@Rheafi** (channel id `UCy8LlkL5MwWqEeh7Jj3CYow`).
+It uses the **same Google Cloud project and OAuth client** as @TheRNBasics (steps 1-4 are not
+repeated), with everything else kept apart:
+
+| | @TheRNBasics (default) | @Rheafi (`--channel rheafi`) |
+|---|---|---|
+| Refresh token (keychain) | `YT_REFRESH_TOKEN` | `YT_REFRESH_TOKEN_RHEAFI` |
+| Kits | `~/Desktop/YouTube Uploads - TheRNBasics/` | `~/Desktop/YouTube Uploads - Rheafi/` |
+| Record | `~/basics-growth-work/youtube/uploaded.json` | `~/basics-growth-work/youtube/uploaded-rheafi.json` |
+| Channel check | the channel name says RN Basics | the channel id is exactly `UCy8LlkL5MwWqEeh7Jj3CYow` |
+| Description check | links all three Basics apps | no "AI" word in title, description or tags; at most 5 hashtags; the line "Education only; not accounting, tax or legal advice. Talk to your CPA."; no App Store or Google Play mention |
+
+The kits use the same day-folder and `upload.txt` format. A kit that breaks a rule is listed as a
+PROBLEM and not uploaded.
+
+**One-time sign-in (Alex, Terminal on the Mac, in the repository folder):**
+
+    sh scripts/setup-youtube.sh --channel rheafi
+
+It reuses the OAuth client already in the keychain (it asks for the ID and secret only if none is
+stored), then opens the browser:
+
+- Sign in with the **Google account that owns Rheafi** and, when asked to choose a channel or
+  account, pick **Rheafi** (it is a Brand Account, so it may appear as its own entry under that
+  Google account).
+- "Google hasn't verified this app" → **Advanced** → **Go to Basics Social (unsafe)**.
+- Tick **every** permission box → **Continue**.
+
+The terminal prints the channel name and id and stores `YT_REFRESH_TOKEN_RHEAFI`. If the channel is
+not `UCy8LlkL5MwWqEeh7Jj3CYow` (for example The RN Basics was picked), it stores nothing and says so;
+run it again. The RN token is never touched by this step. Then check it (read-only):
+
+    node scripts/youtube-schedule.mjs --channel rheafi check
+
+**Running it:**
+
+    node scripts/youtube-schedule.mjs --channel rheafi --dry-run --all   # the plan; changes nothing
+    node scripts/youtube-schedule.mjs --channel rheafi --all             # upload and schedule
+
+`reschedule` and `reschedule-file` take `--channel rheafi` too. The API cannot set a Short's Related
+video, so the run ends with that list (for the NPC Shorts: the long "Why the Largest Pizza Hut
+Franchisee Went Bankrupt: Prime Cost, Debt and the Squeeze", https://youtu.be/4H5sPMVcUaE, already
+public). The quota is per Google Cloud project, so both channels share the 10,000 units a day; each
+channel's record counts only its own spending.
+
 ## 8. Analytics on the Mac (Instagram + YouTube)
 
 1. Store each Instagram account for the analytics job (read-only checks first; the token is hidden):
@@ -174,3 +221,6 @@ reschedule paths can be run with no network and no sign-in:
 
     YT_FAKE_DB=/tmp/yt/db.json YT_STATE=/tmp/yt/uploaded.json \
       node --import ./scripts/youtube-fake-api.mjs scripts/youtube-schedule.mjs --day 2026-11-06
+
+For Rheafi add `YT_FAKE_CHANNEL=rheafi` and `--channel rheafi`; `YT_FAKE_CHANNEL=other` (or `rn`
+with `--channel rheafi`) checks that the scheduler refuses the wrong channel.

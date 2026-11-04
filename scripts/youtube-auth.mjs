@@ -1,9 +1,13 @@
-// One-time on Alex's Mac: signs in to the @TheRNBasics YouTube channel in the browser and stores the
-// OAuth refresh token in the login keychain (service icubasics-social), without it ever appearing on
-// screen. Run it through scripts/setup-youtube.sh, which first stores YT_CLIENT_ID and YT_CLIENT_SECRET
+// One-time on Alex's Mac: signs in to a YouTube channel in the browser and stores the OAuth refresh
+// token in the login keychain (service icubasics-social), without it ever appearing on screen. Run it
+// through scripts/setup-youtube.sh, which first stores YT_CLIENT_ID and YT_CLIENT_SECRET
 // (docs/youtube-setup.md). Everything that uses YouTube runs on the Mac, so nothing goes to GitHub.
 //
-//   node scripts/youtube-auth.mjs
+//   node scripts/youtube-auth.mjs                     # @TheRNBasics → YT_REFRESH_TOKEN
+//   node scripts/youtube-auth.mjs --channel rheafi    # @Rheafi → YT_REFRESH_TOKEN_RHEAFI (same OAuth client)
+//
+// It stores nothing unless the signed-in channel is the one asked for (scripts/youtube-channels.mjs:
+// RN by name, Rheafi by its channel id), so one channel's sign-in never replaces the other's token.
 //
 // It uses Google's loopback flow for desktop apps: a one-shot server on 127.0.0.1 receives the code,
 // PKCE protects the exchange, and prompt=consent makes Google return a refresh token every time.
@@ -18,6 +22,7 @@ import http from 'node:http';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readSecret, writeSecret } from './keychain.mjs';
+import { channelFromArgs } from './youtube-channels.mjs';
 
 const SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
@@ -26,6 +31,10 @@ const SCOPES = [
   'https://www.googleapis.com/auth/youtube.force-ssl',
 ];
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
+let picked;
+try { picked = channelFromArgs(process.argv.slice(2)); } catch (e) { fail(e.message); }
+if (picked.rest.length) fail(`unknown argument(s): ${picked.rest.join(' ')} (usage: node scripts/youtube-auth.mjs [--channel rn|rheafi])`);
+const CHANNEL = picked.channel;
 
 const clientId = readSecret('YT_CLIENT_ID');
 const clientSecret = readSecret('YT_CLIENT_SECRET');
@@ -56,7 +65,7 @@ function receiveCode() {
         client_id: clientId, redirect_uri: server.redirectUri, response_type: 'code', scope: SCOPES.join(' '),
         access_type: 'offline', prompt: 'consent', code_challenge: challenge, code_challenge_method: 'S256', state,
       });
-      console.log('Opening the browser. Sign in with the Google account that owns @TheRNBasics and, if asked,\npick the TheRNBasics channel. "Google hasn\'t verified this app" is expected: Advanced → Go to (app).');
+      console.log(`Opening the browser. Sign in with the Google account that owns ${CHANNEL.handle} and, if asked,\npick the ${CHANNEL.pick} channel. "Google hasn't verified this app" is expected: Advanced → Go to (app).`);
       execFileSync('open', [auth.toString()]);
     });
     setTimeout(() => { server.close(); reject(new Error('no answer from the browser within 5 minutes')); }, 300000).unref();
@@ -76,11 +85,11 @@ if (missing.length) fail(`these permissions were not granted (tick every box on 
 
 // Make sure this is the right channel before storing anything
 const ch = await (await fetch('https://www.googleapis.com/youtube/v3/channels?part=snippet&mine=true', { headers: { Authorization: `Bearer ${tokens.access_token}` } })).json();
-const channel = ch.items?.[0]?.snippet;
-if (!channel) fail('signed in, but that Google account has no YouTube channel; rerun and pick TheRNBasics');
-console.log(`Signed in as channel: ${channel.title} (${channel.customUrl ?? ''})`);
-if (!/rn\s*basics/i.test(`${channel.title} ${channel.customUrl}`)) fail('that is not @TheRNBasics; nothing was stored. Rerun and choose the TheRNBasics channel.');
+const item = ch.items?.[0];
+if (!item?.snippet) fail(`signed in, but that Google account has no YouTube channel; rerun and pick ${CHANNEL.pick}`);
+console.log(`Signed in as channel: ${item.snippet.title} (${item.snippet.customUrl ?? ''}, ${item.id})`);
+if (!CHANNEL.matches(item)) fail(`that is not ${CHANNEL.handle}; nothing was stored. Rerun and choose the ${CHANNEL.pick} channel.`);
 
-writeSecret('YT_REFRESH_TOKEN', tokens.refresh_token);
-console.log('Stored YT_REFRESH_TOKEN in the keychain (service icubasics-social).');
-console.log('Done. Test (read-only): node scripts/youtube-schedule.mjs check');
+writeSecret(CHANNEL.tokenAccount, tokens.refresh_token);
+console.log(`Stored ${CHANNEL.tokenAccount} in the keychain (service icubasics-social).`);
+console.log(`Done. Test (read-only): node scripts/youtube-schedule.mjs${CHANNEL.key === 'rn' ? '' : ` --channel ${CHANNEL.key}`} check`);

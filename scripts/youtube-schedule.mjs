@@ -3,12 +3,18 @@
 // in its upload.txt. Runs ONLY on the Mac (the videos live there, the repository is public); the
 // credentials come from the login keychain (sh scripts/setup-youtube.sh, docs/youtube-setup.md).
 //
+// --channel rheafi (any mode) works on @Rheafi instead: its own refresh token (YT_REFRESH_TOKEN_RHEAFI),
+// kits (~/Desktop/YouTube Uploads - Rheafi/), state file (~/basics-growth-work/youtube/uploaded-rheafi.json),
+// channel check (the channel id) and the Rhea description rules; scripts/youtube-channels.mjs has the
+// list. Without --channel it is @TheRNBasics, exactly as before.
+//
 //   node scripts/youtube-schedule.mjs --dry-run --all        # the plan: times in PT and UTC, quota
 //   node scripts/youtube-schedule.mjs --all                  # upload and schedule every kit not uploaded yet
 //   node scripts/youtube-schedule.mjs --day 2026-11-06       # one day folder only
 //   node scripts/youtube-schedule.mjs reschedule <videoId> 2026-11-04T09:05 [--dry-run]   # Pacific time
 //   node scripts/youtube-schedule.mjs reschedule-file "<CLAUDE TASK - Reschedule ....md>" [--dry-run]
 //   node scripts/youtube-schedule.mjs check                  # read-only: credentials, scopes, channel
+//   node scripts/youtube-schedule.mjs --channel rheafi --dry-run --all   # the same for @Rheafi
 //
 // Without stored credentials every mode is a dry run. Without --day or --all the upload mode is a
 // dry run of every kit.
@@ -35,20 +41,28 @@
 // Pacific day in the state file and stops before the pool passes YT_QUOTA_LIMIT (default 9,000).
 //
 // Environment (all optional): YT_UPLOADS_DIR, YT_STATE, YT_QUOTA_LIMIT, YT_NOW (an ISO time standing in
-// for now, for testing), and YT_CLIENT_ID / YT_CLIENT_SECRET / YT_REFRESH_TOKEN instead of the keychain.
+// for now, for testing), and YT_CLIENT_ID / YT_CLIENT_SECRET / YT_REFRESH_TOKEN (YT_REFRESH_TOKEN_RHEAFI
+// for Rheafi) instead of the keychain. The quota count is per channel's state file, but Google counts
+// the pool per Cloud project, which both channels share: keep a day's runs of both under 10,000 together.
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readSecret } from './keychain.mjs';
 import { parseUpload, weekdayOf } from './youtube-text.mjs';
+import { channelFromArgs } from './youtube-channels.mjs';
 
 const PT = 'America/Los_Angeles';
 const API = 'https://www.googleapis.com/youtube/v3';
 const UPLOAD_API = 'https://www.googleapis.com/upload/youtube/v3';
 const EDUCATION = '27';
-const UPLOADS_DIR = process.env.YT_UPLOADS_DIR || path.join(os.homedir(), 'Desktop/YouTube Uploads - TheRNBasics');
-const STATE_FILE = process.env.YT_STATE || path.join(os.homedir(), 'basics-growth-work/youtube/uploaded.json');
+const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+// The channel comes from the command line (default rn); imported for its helpers, it is rn
+let picked;
+try { picked = channelFromArgs(isMain ? process.argv.slice(2) : []); } catch (e) { fail(e.message); }
+const CHANNEL = picked.channel;
+const UPLOADS_DIR = process.env.YT_UPLOADS_DIR || CHANNEL.uploadsDir;
+const STATE_FILE = process.env.YT_STATE || CHANNEL.stateFile;
 const POOL_LIMIT = Number(process.env.YT_QUOTA_LIMIT || 9000);
 const UPLOADS_PER_DAY = 100;
 const COST = { insert: 1, thumbnail: 50, captions: 400, playlistItem: 50, update: 50, list: 1 };
@@ -60,7 +74,6 @@ export const SCOPES = [
   'https://www.googleapis.com/auth/youtube.force-ssl',
 ];
 
-const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
 const readJson = (file, fallback) => { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch { return fallback; } };
 const now = () => (process.env.YT_NOW ? new Date(process.env.YT_NOW) : new Date());
 const norm = (s) => s.toLowerCase().replace(/\(long\)/g, '').replace(/#shorts/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
@@ -116,7 +129,7 @@ function saveState() {
 const creds = {
   id: process.env.YT_CLIENT_ID || readSecret('YT_CLIENT_ID'),
   secret: process.env.YT_CLIENT_SECRET || readSecret('YT_CLIENT_SECRET'),
-  refresh: process.env.YT_REFRESH_TOKEN || readSecret('YT_REFRESH_TOKEN'),
+  refresh: process.env[CHANNEL.tokenAccount] || readSecret(CHANNEL.tokenAccount),
 };
 const haveCreds = Boolean(creds.id && creds.secret && creds.refresh);
 let token = null;
@@ -130,9 +143,9 @@ async function accessToken() {
   });
   const json = await res.json();
   // invalid_grant: the refresh token was revoked or expired; rerun sh scripts/setup-youtube.sh
-  if (!res.ok || !json.access_token) throw new Error(`token refresh failed: ${json.error ?? res.status} ${json.error_description ?? ''} (rerun sh scripts/setup-youtube.sh)`.trim());
+  if (!res.ok || !json.access_token) throw new Error(`token refresh failed: ${json.error ?? res.status} ${json.error_description ?? ''} (rerun ${CHANNEL.setup})`.trim());
   const missing = SCOPES.filter((s) => !(json.scope ?? '').split(' ').includes(s));
-  if (missing.length) throw new Error(`the stored sign-in lacks ${missing.map((s) => s.split('/').pop()).join(', ')}; rerun sh scripts/setup-youtube.sh and tick every box`);
+  if (missing.length) throw new Error(`the stored sign-in lacks ${missing.map((s) => s.split('/').pop()).join(', ')}; rerun ${CHANNEL.setup} and tick every box`);
   token = { value: json.access_token, at: Date.now() };
   return token.value;
 }
@@ -162,7 +175,7 @@ async function myChannel() {
   const { items = [] } = await list('channels', { part: 'snippet,contentDetails,statistics', mine: 'true' });
   const ch = items[0];
   if (!ch) throw new Error('the credentials work but no YouTube channel belongs to that Google account');
-  if (!/rn\s*basics/i.test(`${ch.snippet.title} ${ch.snippet.customUrl ?? ''}`)) throw new Error(`signed in to "${ch.snippet.title}", not @TheRNBasics; rerun sh scripts/setup-youtube.sh`);
+  if (!CHANNEL.matches(ch)) throw new Error(`signed in to "${ch.snippet.title}" (${ch.id}), not ${CHANNEL.handle}; rerun ${CHANNEL.setup}`);
   return ch;
 }
 
@@ -256,7 +269,7 @@ function readKits() {
       const kit = { key, day, date, topic, n: Number(m[1]), type: m[2], name: m[3], dir, problems: [] };
       const txt = path.join(dir, 'upload.txt');
       if (!fs.existsSync(txt)) { kit.problems.push('no upload.txt'); kits.push(kit); continue; }
-      Object.assign(kit, parseUpload(fs.readFileSync(txt, 'utf8')));
+      Object.assign(kit, parseUpload(fs.readFileSync(txt, 'utf8'), { rules: CHANNEL.rules }));
       kit.problems = [...kit.problems];
       if (kit.schedule) {
         if (kit.schedule.date !== date) kit.problems.push(`SCHEDULE date ${kit.schedule.date} is not the day folder's date ${date}`);
@@ -313,9 +326,9 @@ async function upload({ day, all, dryRun }) {
   const kits = readKits().filter((k) => !day || k.date === day);
   if (!kits.length) fail(day ? `no day folder for ${day} in ${UPLOADS_DIR}` : `no kits in ${UPLOADS_DIR}`);
   const live = haveCreds && !dryRun && (day || all);
-  if (!haveCreds) console.log('No YouTube credentials in the keychain (docs/youtube-setup.md): dry run.');
+  if (!haveCreds) console.log(`No YouTube credentials in the keychain for ${CHANNEL.handle} (${CHANNEL.setup}; docs/youtube-setup.md): dry run.`);
   else if (!live) console.log(`Dry run${!(day || all) ? ' (give --day or --all to upload)' : ''}.`);
-  console.log(`Kits: ${UPLOADS_DIR}\nState: ${STATE_FILE}\nQuota used today (Pacific ${state.quota.day}): ${state.quota.pool} of ${POOL_LIMIT} pool units, ${state.quota.uploads} of ${UPLOADS_PER_DAY} uploads\n`);
+  console.log(`Channel: ${CHANNEL.handle} (--channel ${CHANNEL.key})\nKits: ${UPLOADS_DIR}\nState: ${STATE_FILE}\nQuota used today (Pacific ${state.quota.day}): ${state.quota.pool} of ${POOL_LIMIT} pool units, ${state.quota.uploads} of ${UPLOADS_PER_DAY} uploads\n`);
 
   let ch = null;
   let titles = null;
@@ -414,7 +427,7 @@ function parsePtArg(s) {
 /** Moves already-scheduled videos: [{ id, label, publishAt }]. Skips public, unscheduled, missing or mismatched ones. */
 async function reschedule(moves, { dryRun }) {
   const live = haveCreds && !dryRun;
-  if (!haveCreds) console.log('No YouTube credentials in the keychain (docs/youtube-setup.md): dry run, nothing is checked on YouTube.');
+  if (!haveCreds) console.log(`No YouTube credentials in the keychain for ${CHANNEL.handle} (docs/youtube-setup.md): dry run, nothing is checked on YouTube.`);
   else if (!live) console.log('Dry run: reading each video, changing nothing.');
   const cost = moves.length * (COST.list + COST.update);
   console.log(`${moves.length} move(s); quota at most ${cost} pool units (videos.list ${COST.list} + videos.update ${COST.update} each). Used today: ${state.quota.pool} of ${POOL_LIMIT}.\n`);
@@ -488,16 +501,15 @@ export function parseRescheduleFile(text, today = ptToday()) {
 }
 
 async function check() {
-  if (!haveCreds) fail('YT_CLIENT_ID, YT_CLIENT_SECRET and YT_REFRESH_TOKEN are not in the keychain; run sh scripts/setup-youtube.sh');
+  if (!haveCreds) fail(`YT_CLIENT_ID, YT_CLIENT_SECRET and ${CHANNEL.tokenAccount} are not in the keychain; run ${CHANNEL.setup}`);
   const ch = await myChannel();
   console.log(`Credentials OK for ${ch.snippet.title} (${ch.snippet.customUrl ?? ch.id}); all ${SCOPES.length} permissions granted; ${ch.statistics.videoCount} videos, ${ch.statistics.subscriberCount} subscribers`);
 }
 
 // ---------- command line ----------
 
-const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
-  const argv = process.argv.slice(2);
+  const argv = picked.rest;
   const dryRun = argv.includes('--dry-run');
   const rest = argv.filter((a) => a !== '--dry-run');
   const run = async () => {

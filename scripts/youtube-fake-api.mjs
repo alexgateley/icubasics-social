@@ -12,18 +12,26 @@
 //   YT_FAKE_FAIL     "captions:2" fails the 2nd captions.insert of this run (also thumbnail, playlistItem,
 //                    insert, update)
 //   YT_FAKE_SCOPES   the scopes the token refresh reports (default: all four)
+//   YT_FAKE_CHANNEL  the channel the sign-in belongs to: rn (default), rheafi, or other (a third
+//                    channel, to test that the scheduler refuses it); with --channel rheafi use rheafi
 import fs from 'node:fs';
 import path from 'node:path';
 
 const DB = process.env.YT_FAKE_DB;
 if (!DB) throw new Error('youtube-fake-api.mjs needs YT_FAKE_DB');
 fs.mkdirSync(path.dirname(DB), { recursive: true });
-Object.assign(process.env, { YT_CLIENT_ID: 'fake.apps.googleusercontent.com', YT_CLIENT_SECRET: 'fake', YT_REFRESH_TOKEN: 'fake' });
+Object.assign(process.env, { YT_CLIENT_ID: 'fake.apps.googleusercontent.com', YT_CLIENT_SECRET: 'fake', YT_REFRESH_TOKEN: 'fake', YT_REFRESH_TOKEN_RHEAFI: 'fake' });
+const CHANNEL = {
+  rn: { id: 'UCfakeRNBasics', snippet: { title: 'The RN Basics', customUrl: '@thernbasics' }, playlists: ['NCLEX Pharm Explained', 'NCLEX Labs and ECGs Explained', 'Critical Care for Nursing Students', 'NCLEX in 60 Seconds'] },
+  rheafi: { id: 'UCy8LlkL5MwWqEeh7Jj3CYow', snippet: { title: 'Rheafi', customUrl: '@rheafi' }, playlists: ['Money stories', 'Shorts', 'Winery Books'] },
+  other: { id: 'UCfakeSomeoneElse', snippet: { title: 'Rheafi Fan Page', customUrl: '@rheafifan' }, playlists: [] },
+}[process.env.YT_FAKE_CHANNEL ?? 'rn'];
+if (!CHANNEL) throw new Error('YT_FAKE_CHANNEL must be rn, rheafi or other');
 
 const seed = process.env.YT_FAKE_SEED ? JSON.parse(fs.readFileSync(process.env.YT_FAKE_SEED, 'utf8')) : {};
 const db = fs.existsSync(DB) ? JSON.parse(fs.readFileSync(DB, 'utf8')) : {
   videos: (seed.videos ?? []).map((v) => ({ id: v.id, snippet: { title: v.title }, status: { privacyStatus: v.privacyStatus ?? 'private', publishAt: v.publishAt, embeddable: true, license: 'youtube', publicStatsViewable: true, selfDeclaredMadeForKids: false, containsSyntheticMedia: true } })),
-  playlists: (seed.playlists ?? ['NCLEX Pharm Explained', 'NCLEX Labs and ECGs Explained', 'Critical Care for Nursing Students', 'NCLEX in 60 Seconds']).map((t, i) => ({ id: `PLfake${i}`, snippet: { title: t }, items: [] })),
+  playlists: (seed.playlists ?? CHANNEL.playlists).map((t, i) => ({ id: `PLfake${i}`, snippet: { title: t }, items: [] })),
   captions: [], calls: [], next: 1,
 };
 const save = () => fs.writeFileSync(DB, JSON.stringify(db, null, 2));
@@ -71,7 +79,7 @@ globalThis.fetch = async (input, init = {}) => {
     }
     switch (`${method} ${url.pathname}`) {
       case 'GET /youtube/v3/channels':
-        return reply(200, { items: [{ id: 'UCfakeRNBasics', snippet: { title: 'The RN Basics', customUrl: '@thernbasics' }, contentDetails: { relatedPlaylists: { uploads: 'UUfake' } }, statistics: { videoCount: String(db.videos.length), subscriberCount: '123' } }] });
+        return reply(200, { items: [{ id: CHANNEL.id, snippet: CHANNEL.snippet, contentDetails: { relatedPlaylists: { uploads: 'UUfake' } }, statistics: { videoCount: String(db.videos.length), subscriberCount: '123' } }] });
       case 'GET /youtube/v3/playlistItems':
         if (url.searchParams.get('playlistId') !== 'UUfake') return err(404, 'playlistNotFound', 'fake: only the uploads playlist is listable');
         return reply(200, page([...db.videos].reverse().map((v) => ({ snippet: { title: v.snippet.title, resourceId: { videoId: v.id } } })), url));

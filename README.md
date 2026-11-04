@@ -132,6 +132,14 @@ are in the login keychain (`sh scripts/setup-youtube.sh`). Setup and details:
     node scripts/youtube-schedule.mjs --all                 # upload and schedule what is not uploaded yet
     node scripts/youtube-schedule.mjs reschedule-file "<CLAUDE TASK - Reschedule ....md>" --dry-run
 
+The same scheduler also serves Rhea's channel, @Rheafi, with `--channel rheafi` (its own refresh
+token `YT_REFRESH_TOKEN_RHEAFI`, kits in `~/Desktop/YouTube Uploads - Rheafi/`, record
+`~/basics-growth-work/youtube/uploaded-rheafi.json`, and the Rhea description rules instead of the
+three app links). Without `--channel` everything is @TheRNBasics as before.
+
+    sh scripts/setup-youtube.sh --channel rheafi            # one-time sign-in to @Rheafi
+    node scripts/youtube-schedule.mjs --channel rheafi --dry-run --all
+
 ## TikTok (posting page on the Mac; app in TikTok's sandbox)
 
 TikTok posts go through TikTok's Content Posting API from a local page on Alex's Mac,
