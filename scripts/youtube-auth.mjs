@@ -1,25 +1,30 @@
 // One-time on Alex's Mac: signs in to the @TheRNBasics YouTube channel in the browser and stores the
-// OAuth refresh token, without it ever appearing on screen. Run it through scripts/setup-youtube.sh,
-// which first stores YT_CLIENT_ID and YT_CLIENT_SECRET (docs/youtube-setup.md).
+// OAuth refresh token in the login keychain (service icubasics-social), without it ever appearing on
+// screen. Run it through scripts/setup-youtube.sh, which first stores YT_CLIENT_ID and YT_CLIENT_SECRET
+// (docs/youtube-setup.md). Everything that uses YouTube runs on the Mac, so nothing goes to GitHub.
 //
-//   node scripts/youtube-auth.mjs            # keychain + GitHub secret YT_REFRESH_TOKEN
-//   node scripts/youtube-auth.mjs --local    # keychain only
+//   node scripts/youtube-auth.mjs
 //
 // It uses Google's loopback flow for desktop apps: a one-shot server on 127.0.0.1 receives the code,
 // PKCE protects the exchange, and prompt=consent makes Google return a refresh token every time.
-// Scopes: upload (the posting job), readonly and Analytics readonly (scripts/analytics.mjs).
+// Scopes (the same list as SCOPES in youtube-schedule.mjs, which checks them; checked against
+// Google's method pages on 2026-11-03):
+//   youtube.upload         videos.insert and thumbnails.set (scripts/youtube-schedule.mjs)
+//   youtube.readonly       channel, uploads and playlist lists (youtube-schedule.mjs, analytics.mjs)
+//   yt-analytics.readonly  YouTube Analytics reports (scripts/analytics.mjs)
+//   youtube.force-ssl      captions.insert, videos.update (reschedule) and playlistItems.insert; none of
+//                          the three accepts youtube.upload
 import http from 'node:http';
 import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { readSecret, writeSecret } from './keychain.mjs';
 
-const REPO = 'alexgateley/icubasics-social';
 const SCOPES = [
   'https://www.googleapis.com/auth/youtube.upload',
   'https://www.googleapis.com/auth/youtube.readonly',
   'https://www.googleapis.com/auth/yt-analytics.readonly',
+  'https://www.googleapis.com/auth/youtube.force-ssl',
 ];
-const localOnly = process.argv.includes('--local');
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
 
 const clientId = readSecret('YT_CLIENT_ID');
@@ -78,8 +83,4 @@ if (!/rn\s*basics/i.test(`${channel.title} ${channel.customUrl}`)) fail('that is
 
 writeSecret('YT_REFRESH_TOKEN', tokens.refresh_token);
 console.log('Stored YT_REFRESH_TOKEN in the keychain (service icubasics-social).');
-if (!localOnly) {
-  execFileSync('gh', ['secret', 'set', 'YT_REFRESH_TOKEN', '--repo', REPO], { input: tokens.refresh_token, stdio: ['pipe', 'ignore', 'inherit'] });
-  console.log(`Stored the GitHub secret YT_REFRESH_TOKEN on ${REPO}.`);
-}
-console.log('Done. Test (read-only): gh workflow run "Post Question of the Day" --repo alexgateley/icubasics-social -f brand=rn -f dry_run=true');
+console.log('Done. Test (read-only): node scripts/youtube-schedule.mjs check');

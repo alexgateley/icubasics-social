@@ -115,21 +115,22 @@ made in the QuizApp repo by `scripts/social/recap.sh <brand> <first Sunday> <las
 
 A second explainer series posts from **3 PM Chicago** (kind `afternoon`), from `shorts-pm/<brand>/schedule.json`, alongside the noon series. Schedule with `SLOT=pm node scripts/add-short.mjs "<topic folder>" <date> [slug]`, then commit and push. The Mac kicks it at 3:05 and 5:05 PM Chicago (`launchd/com.icubasics.afternoon.plist`; install it like the other agents).
 
-## YouTube Shorts (RN Basics, since this branch)
+## YouTube (@TheRNBasics, scheduled from the Mac)
 
-Basics has one YouTube channel, @TheRNBasics, and it always gets the RN version. When an RN short
-from `shorts/rn/` (noon) or `shorts-am/rn/` (7 AM) has posted to Instagram, the RN job's next step
-runs `scripts/youtube.mjs`, which uploads the same `reel.mp4` as a public Short with the title and
-description in that short's `youtube.json` (written by `add-short.mjs` from the YOUTUBE SHORTS part of
-the Desktop captions file), the Education category and the altered or synthetic content label.
-Markers in `published-youtube/<slug>.json` stop double uploads; `youtube-skip.json` lists the shorts
-Alex scheduled on YouTube by hand (through Nov 27), which never upload. Until the `YT_CLIENT_ID`,
-`YT_CLIENT_SECRET` and `YT_REFRESH_TOKEN` secrets exist the step only prints a notice, and a YouTube
-failure never fails the Instagram job. One-time setup: [docs/youtube-setup.md](docs/youtube-setup.md).
+Basics has one YouTube channel, @TheRNBasics, and it always gets the RN version. It releases one
+topic per day: the topic's long at 9:00 AM Pacific and its Shorts right after (9:05, 9:10, ...).
+Nothing about YouTube runs in GitHub Actions. `scripts/youtube-schedule.mjs` runs on Alex's Mac and
+uploads the kits in `~/Desktop/YouTube Uploads - TheRNBasics/<day>/<n> LONG|SHORT - <name>/` (video,
+`upload.txt`, and for longs `thumbnail.png` and `captions.srt`) as private videos with the publish time
+from `upload.txt`, then sets the long's thumbnail and captions and adds each video to the suggested
+playlists that exist. Its record of what is uploaded is `~/basics-growth-work/youtube/uploaded.json`
+(never this repository), and it also skips any kit whose title is already on the channel. Credentials
+are in the login keychain (`sh scripts/setup-youtube.sh`). Setup and details:
+[docs/youtube-setup.md](docs/youtube-setup.md).
 
-    DRY_RUN=true node scripts/youtube.mjs                  # what would upload today
-    DRY_RUN=true POST_DATE=2026-11-07 node scripts/youtube.mjs
-    YOUTUBE_ONLY=1 node scripts/add-short.mjs "<topic folder>" <slug>   # youtube.json for an already scheduled short
+    node scripts/youtube-schedule.mjs --dry-run --all       # the plan: PT and UTC times, quota, hand-work
+    node scripts/youtube-schedule.mjs --all                 # upload and schedule what is not uploaded yet
+    node scripts/youtube-schedule.mjs reschedule-file "<CLAUDE TASK - Reschedule ....md>" --dry-run
 
 ## Analytics (on the Mac only)
 
@@ -143,7 +144,8 @@ per-video YouTube Analytics (views, estimatedMinutesWatched, averageViewDuration
 subscribersGained), appends them to `~/basics-growth-work/analytics/*.jsonl`, and rebuilds
 `~/basics-growth-work/analytics/dashboard.html` (followers over time, top 10 this week, every Reel
 and Short with filters by account, topic and slot). Topics and slots come from the markers in
-`published*/`. It refreshes its own keychain copy of each Instagram token weekly.
+`published*/`, YouTube topics from the scheduler's `uploaded.json`. It refreshes its own keychain
+copy of each Instagram token weekly.
 
     node scripts/analytics.mjs                 # fetch and rebuild the dashboard
     node scripts/analytics.mjs dashboard       # rebuild only
@@ -151,9 +153,9 @@ and Short with filters by account, topic and slot). Topics and slots come from t
 
 ## Later: Facebook Reels and Threads
 
-Not built. Both would plug in the same way as YouTube: a step after "Publish today's post" that
-reads the same marker and `reel.mp4` URL on GitHub Pages and writes its own marker folder
-(`published-facebook/`, `published-threads/`). Facebook Reels use the Pages API
+Not built. Each would be a step after "Publish today's post" that reads the same marker and
+`reel.mp4` URL on GitHub Pages and writes its own marker folder (`published-facebook/`,
+`published-threads/`). Facebook Reels use the Pages API
 (`/<page-id>/video_reels`, upload phase start → transfer by `file_url` → finish) with a Page token
 from the same Meta app; Threads uses `graph.threads.net` (`/<threads-user-id>/threads` with
 `media_type=VIDEO` and `video_url`, then `/threads_publish`) with its own Threads token. Analytics

@@ -1,5 +1,6 @@
 // Reads and writes the posting credentials in Alex's macOS login keychain (service "icubasics-social"),
-// for the scripts that run on the Mac instead of GitHub Actions (youtube-auth.mjs, analytics.mjs).
+// for the scripts that run on the Mac instead of GitHub Actions (youtube-auth.mjs, youtube-schedule.mjs,
+// analytics.mjs).
 // Values go to `security` on stdin, never on the command line where `ps` could see them, and are
 // never logged. Store them with scripts/setup-keychain.sh.
 import { execFileSync } from 'node:child_process';

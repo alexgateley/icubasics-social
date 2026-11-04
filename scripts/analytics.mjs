@@ -195,11 +195,12 @@ async function fetchYouTube() {
 
 // ---------- topics and slots from the repository's markers ----------
 
-/** mediaId / videoId → { kind, folder, brand } from the published markers on origin/main (read through git; the checkout is untouched). */
+/** mediaId / videoId → { kind, folder, brand } from the published markers on origin/main (read through git; the checkout is untouched)
+ *  and the YouTube scheduler's state file. */
 function markerIndex() {
   const git = (args, input) => execFileSync('git', ['-C', REPO_DIR, ...args], { encoding: 'utf8', input, maxBuffer: 64 << 20, stdio: ['pipe', 'pipe', 'ignore'] });
   try { git(['fetch', '-q', 'origin', 'main']); } catch { log('git fetch failed; using the last fetched origin/main'); }
-  const paths = git(['ls-tree', '-r', '--name-only', 'origin/main', '--', 'published', 'published-rn', 'published-medic', 'published-youtube'])
+  const paths = git(['ls-tree', '-r', '--name-only', 'origin/main', '--', 'published', 'published-rn', 'published-medic'])
     .split('\n').filter((p) => p.endsWith('.json'));
   const out = Buffer.from(git(['cat-file', '--batch'], paths.map((p) => `origin/main:${p}`).join('\n') + '\n'), 'utf8');
   const index = {};
@@ -212,15 +213,13 @@ function markerIndex() {
     at = nl + 1 + size + 1;
     try {
       const m = JSON.parse(body);
-      const brand = p.startsWith('published-youtube') ? 'yt' : p.startsWith('published-rn') ? 'rn' : p.startsWith('published-medic') ? 'medic' : 'icu';
+      const brand = p.startsWith('published-rn') ? 'rn' : p.startsWith('published-medic') ? 'medic' : 'icu';
       if (m.mediaId) index[m.mediaId] = { kind: m.kind, folder: m.folder, brand };
-      if (m.videoId) index[m.videoId] = { kind: m.kind, folder: m.folder, brand };
     } catch { /* not a marker */ }
   }
-  const skip = readJson(path.join(REPO_DIR, 'youtube-skip.json'), {});
-  for (const kind of ['shorts', 'long']) {
-    for (const [slug, v] of Object.entries(skip[kind] ?? {})) if (v.videoId) index[v.videoId] = { kind, folder: slug, brand: 'yt' };
-  }
+  // YouTube videos uploaded by youtube-schedule.mjs: the day folder's topic ("Heart Failure"); others fall back to the title
+  const yt = readJson(process.env.YT_STATE || path.join(os.homedir(), 'basics-growth-work/youtube/uploaded.json'), {});
+  for (const k of Object.values(yt.kits ?? {})) if (k.videoId) index[k.videoId] = { kind: k.type === 'LONG' ? 'long' : 'shorts', folder: k.topic, brand: 'yt' };
   return index;
 }
 

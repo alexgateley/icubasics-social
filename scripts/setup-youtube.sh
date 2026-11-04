@@ -1,23 +1,21 @@
 #!/bin/sh
 # One-time YouTube setup on Alex's Mac (docs/youtube-setup.md has the Google Cloud steps first).
 # Prompts for the Desktop OAuth client's ID and secret (the secret is not echoed), stores both in
-# the login keychain (service icubasics-social) and as the GitHub secrets YT_CLIENT_ID and
-# YT_CLIENT_SECRET, then runs scripts/youtube-auth.mjs, which opens the browser for the sign-in and
-# stores YT_REFRESH_TOKEN the same two ways. Nothing is printed. Needs the GitHub CLI logged in.
+# the login keychain (service icubasics-social), then runs scripts/youtube-auth.mjs, which opens the
+# browser for the sign-in and stores YT_REFRESH_TOKEN in the keychain too. Nothing is printed and
+# nothing goes to GitHub: the YouTube scheduler and the analytics both run on this Mac.
 #
-#   sh scripts/setup-youtube.sh           # keychain and GitHub secrets
-#   sh scripts/setup-youtube.sh --local   # keychain only (analytics without the upload job)
+#   sh scripts/setup-youtube.sh
+#
+# Rerun it to sign in again (for example after adding a scope, or after an invalid_grant error).
 set -eu
-REPO="alexgateley/icubasics-social"
 SERVICE="icubasics-social"
-LOCAL="${1:-}"
 cd "$(dirname "$0")/.."
 
 # printf is a shell builtin, so the value never shows up in the process list
 store() {
   printf 'add-generic-password -U -s "%s" -a "%s" -w "%s"\n' "$SERVICE" "$1" "$2" | security -i >/dev/null
   security find-generic-password -s "$SERVICE" -a "$1" >/dev/null 2>&1 || { echo "Could not store $1 in the keychain."; exit 1; }
-  if [ "$LOCAL" != "--local" ]; then printf '%s' "$2" | gh secret set "$1" --repo "$REPO"; fi
 }
 
 printf 'OAuth client ID (ends in .apps.googleusercontent.com): '; read -r YT_CLIENT_ID
@@ -28,5 +26,5 @@ case "$YT_CLIENT_ID" in *.apps.googleusercontent.com) ;; *) echo "That does not 
 case "$YT_CLIENT_SECRET$YT_CLIENT_ID" in *[\ \"\\]*) echo "Unexpected spaces or quotes in a value; paste it again."; exit 1 ;; esac
 store YT_CLIENT_ID "$YT_CLIENT_ID"
 store YT_CLIENT_SECRET "$YT_CLIENT_SECRET"
-echo "Stored YT_CLIENT_ID and YT_CLIENT_SECRET."
-node scripts/youtube-auth.mjs $LOCAL
+echo "Stored YT_CLIENT_ID and YT_CLIENT_SECRET in the keychain."
+node scripts/youtube-auth.mjs
