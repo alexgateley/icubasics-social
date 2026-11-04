@@ -1,5 +1,6 @@
 // Nightly analytics for Alex's seven Instagram accounts (the three Basics ones, @runonrhea, @thewinerybooks,
-// @franchifi, @griptheorywheels) and the @TheRNBasics YouTube channel. Runs ONLY on
+// @franchifi, @griptheorywheels) and the YouTube channels in youtube-channels.mjs (@TheRNBasics as account
+// "yt", @Rheafi as "yt-rheafi"). Runs ONLY on
 // Alex's Mac (launchd/com.icubasics.analytics.plist, 2 AM Pacific): insights are private and this
 // repository is public, so nothing here writes into the repository. Credentials come from the login
 // keychain (scripts/setup-keychain.sh, scripts/setup-youtube.sh); every API call is a read.
@@ -10,7 +11,10 @@
 //   FIXTURES=1 ANALYTICS_DIR=/tmp/x node scripts/analytics.mjs   # made-up data, no network (testing)
 //
 // Store (ANALYTICS_DIR, default ~/basics-growth-work/analytics/):
-//   accounts.jsonl   one line per account per night: followers (Instagram followers_count, YouTube subscriberCount)
+//   accounts.jsonl   one line per account per day: followers (Instagram followers_count, YouTube subscriberCount).
+//                    A second run the same day replaces that day's line. Lines with "estimated": true are
+//                    backfilled history (see backfillFollowers), rebuilt on every run and never kept where a
+//                    measured line exists for that day.
 //   media.jsonl      one line per Reel or video per night with its lifetime totals
 //   media-meta.json  per Reel or video: account, posted time, title, permalink, topic, slot
 //   state.json       no secrets: per Instagram account the keychain token's last refresh and expiry
@@ -26,12 +30,17 @@
 //   April 21, 2025, video_views January 8, 2025. Insights can lag up to 48 hours and are kept 2 years.
 //   YouTube Analytics v2 reports, dimension video (needs maxResults ≤ 200 and a sort): views,
 //   estimatedMinutesWatched, averageViewDuration (seconds), likes, subscribersGained. These lag 2-3 days.
+//   Follower history (2026-11-04): Instagram user insights follower_count (period=day, new followers per day,
+//   last 30 days, not the current day) is returned only for accounts with 100+ followers (an account
+//   under 100 gets {"data":[]}); YouTube Analytics dimension day with subscribersGained,subscribersLost
+//   covers the whole channel history.
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readSecret, writeSecret } from './keychain.mjs';
+import { CHANNELS } from './youtube-channels.mjs';
 
 const TZ = 'America/Chicago';
 const GRAPH = 'https://graph.instagram.com/v25.0';
@@ -150,17 +159,53 @@ async function fetchInstagram(acct, state) {
   }
   log(`${acct.label}: ${profile.followers_count} followers, ${reels.length} Reels from the last ${INSIGHTS_DAYS} days${failed ? `, ${failed} with missing metrics` : ''}`);
   status(state, acct, 'ok', `${reels.length} Reels${failed ? `, ${failed} with missing metrics` : ''}`);
-  return { account: { date: today, platform: 'instagram', account: acct.account, followers: profile.followers_count, mediaCount: profile.media_count }, rows, metas };
+  let history = [];
+  try { history = await igHistory(acct, token, userId, profile.followers_count); } catch (e) { log(`${acct.label}: no follower history (${scrub(e.message)})`); }
+  return { account: { date: today, platform: 'instagram', account: acct.account, followers: profile.followers_count, mediaCount: profile.media_count }, rows, metas, history };
+}
+
+// ---------- follower history ----------
+
+/** Reconstructs end-of-day totals backwards from today's total: total(D) = now − net gains on the days after D.
+ *  gains: [[YYYY-MM-DD, net]]. Returns [{ date, followers }] for every day from `from` (or the first gain day)
+ *  to yesterday. Days the API has not reported yet count as 0, so the latest jump lands on the last days. */
+function backCount(now, gains, from) {
+  const net = Object.fromEntries(gains);
+  const start = from ?? gains.map((g) => g[0]).sort()[0];
+  if (!start) return [];
+  const out = [];
+  let total = now;
+  for (let d = today; d > start;) {
+    total -= net[d] ?? 0;
+    d = new Date(Date.parse(`${d}T12:00:00Z`) - 86400000).toISOString().slice(0, 10);
+    out.push({ date: d, followers: Math.max(0, total) });
+  }
+  return out.reverse();
+}
+
+/** Instagram: new followers per day for the last 30 days (100+ followers only). follower_count counts follows, not
+ *  unfollows, so the reconstructed totals are estimates. */
+async function igHistory(acct, token, userId, followers) {
+  const until = Math.floor(Date.now() / 1000);
+  const json = await ig(token, `${userId}/insights`, { metric: 'follower_count', period: 'day', since: String(until - 30 * 86400), until: String(until) });
+  const values = json.data?.[0]?.values ?? [];
+  if (!values.length) { log(`${acct.label}: no follower history from Instagram (it needs 100+ followers; ${followers} now)`); return []; }
+  // end_time is the end of the day the value covers (midnight Pacific, the following date in UTC)
+  const gains = values.map((v) => [new Date(Date.parse(v.end_time) - 12 * 3600000).toISOString().slice(0, 10), Number(v.value) || 0]);
+  return backCount(followers, gains, gains[0][0]);
 }
 
 // ---------- YouTube ----------
 
-async function ytToken() {
-  const [id, secret, refresh] = ['YT_CLIENT_ID', 'YT_CLIENT_SECRET', 'YT_REFRESH_TOKEN'].map(readSecret);
+// Store tag per channel: @TheRNBasics keeps "yt" from before Rheafi existed
+const ytAccount = (channel) => (channel.key === 'rn' ? 'yt' : `yt-${channel.key}`);
+
+async function ytToken(channel) {
+  const [id, secret, refresh] = ['YT_CLIENT_ID', 'YT_CLIENT_SECRET', channel.tokenAccount].map(readSecret);
   if (!id || !secret || !refresh) return null;
   const res = await fetch('https://oauth2.googleapis.com/token', { method: 'POST', body: new URLSearchParams({ client_id: id, client_secret: secret, refresh_token: refresh, grant_type: 'refresh_token' }) });
   const json = await res.json();
-  if (!json.access_token) throw new Error(`YouTube token refresh failed: ${json.error ?? res.status} (rerun sh scripts/setup-youtube.sh)`);
+  if (!json.access_token) throw new Error(`YouTube token refresh failed: ${json.error ?? res.status} (rerun ${channel.setup})`);
   return json.access_token;
 }
 
@@ -173,11 +218,13 @@ async function yt(token, url, params) {
 
 const isoSeconds = (d = '') => { const m = d.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/) ?? []; return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0); };
 
-async function fetchYouTube() {
-  const token = await ytToken();
-  if (!token) { log('YouTube: not in the keychain (sh scripts/setup-youtube.sh); skipped'); return null; }
+async function fetchYouTube(channel) {
+  const token = await ytToken(channel);
+  if (!token) { log(`YouTube ${channel.handle}: not in the keychain (${channel.setup}); skipped`); return null; }
+  const account = ytAccount(channel);
   const V3 = 'https://www.googleapis.com/youtube/v3';
-  const ch = (await yt(token, `${V3}/channels`, { part: 'snippet,statistics,contentDetails', mine: 'true' })).items[0];
+  const ch = (await yt(token, `${V3}/channels`, { part: 'snippet,statistics,contentDetails', mine: 'true' })).items?.[0];
+  if (!ch || !channel.matches(ch)) throw new Error(`the ${channel.tokenAccount} sign-in is not ${channel.handle} (got ${ch?.snippet?.title ?? 'no channel'})`);
   const ids = [];
   let pageToken = '';
   do {
@@ -201,18 +248,28 @@ async function fetchYouTube() {
   for (const [id, v] of Object.entries(videos)) {
     const s = stats[id] ?? {};
     rows.push({
-      date: today, platform: 'youtube', account: 'yt', id,
+      date: today, platform: 'youtube', account, id,
       views: s.views ?? 0, liveViews: Number(v.statistics?.viewCount ?? 0), minutesWatched: s.estimatedMinutesWatched ?? 0,
       avgViewDuration: s.averageViewDuration ?? 0, likes: s.likes ?? Number(v.statistics?.likeCount ?? 0), subscribersGained: s.subscribersGained ?? 0,
     });
     const seconds = isoSeconds(v.contentDetails?.duration);
     metas[id] = {
-      platform: 'youtube', account: 'yt', posted: v.status?.publishAt ?? v.snippet.publishedAt, title: v.snippet.title,
+      platform: 'youtube', account, posted: v.status?.publishAt ?? v.snippet.publishedAt, title: v.snippet.title,
       permalink: seconds <= 180 ? `https://youtube.com/shorts/${id}` : `https://youtu.be/${id}`, format: seconds <= 180 ? 'short' : 'long', privacy: v.status?.privacyStatus,
     };
   }
   log(`YouTube ${ch.snippet.title}: ${ch.statistics.subscriberCount} subscribers, ${ids.length} videos`);
-  return { account: { date: today, platform: 'youtube', account: 'yt', followers: Number(ch.statistics.subscriberCount), mediaCount: Number(ch.statistics.videoCount) }, rows, metas };
+  const followers = Number(ch.statistics.subscriberCount);
+  // Subscriber history: net subscribers per day since the channel began, counted back from today's total
+  let history = [];
+  try {
+    const daily = await yt(token, 'https://youtubeanalytics.googleapis.com/v2/reports', {
+      ids: 'channel==MINE', startDate: ch.snippet.publishedAt.slice(0, 10), endDate: today,
+      metrics: 'subscribersGained,subscribersLost', dimensions: 'day', sort: 'day',
+    });
+    history = backCount(followers, (daily.rows ?? []).map(([day, gained, lost]) => [day, gained - lost]), ch.snippet.publishedAt.slice(0, 10));
+  } catch (e) { log(`YouTube ${channel.handle}: no subscriber history (${scrub(e.message)})`); }
+  return { account: { date: today, platform: 'youtube', account, followers, mediaCount: Number(ch.statistics.videoCount) }, rows, metas, history };
 }
 
 // ---------- topics and slots from the repository's markers ----------
@@ -264,13 +321,34 @@ function label(metas, index) {
 
 // ---------- store ----------
 
+/** One line per account per day, sorted: measured lines win (the later one if a day has two); the fetched accounts'
+ *  old estimated lines are replaced by tonight's backfill, which fills only days with no measured line. */
+function followerLines(lines, results) {
+  const key = (r) => `${r.platform}:${r.account}`;
+  const rebuilt = new Set(results.filter((r) => r.history?.length).map((r) => key(r.account)));
+  const byDay = new Map();
+  for (const r of lines) {
+    if (r.estimated && rebuilt.has(key(r))) continue;
+    const k = `${key(r)}|${r.date}`;
+    const had = byDay.get(k);
+    if (!had || had.estimated || !r.estimated) byDay.set(k, r);
+  }
+  for (const res of results) {
+    for (const h of res.history ?? []) {
+      const k = `${key(res.account)}|${h.date}`;
+      if (!byDay.has(k)) byDay.set(k, { date: h.date, platform: res.account.platform, account: res.account.account, followers: h.followers, estimated: true });
+    }
+  }
+  return [...byDay.values()].sort((a, b) => key(a).localeCompare(key(b)) || a.date.localeCompare(b.date));
+}
+
 /** Replaces tonight's lines for the accounts that were fetched (a second run the same night overwrites). */
 function save(results) {
   fs.mkdirSync(DIR, { recursive: true });
   const fetched = new Set(results.map((r) => `${r.account.platform}:${r.account.account}`));
   const keep = (row) => !(row.date === today && fetched.has(`${row.platform}:${row.account}`));
   const write = (name, rows) => fs.writeFileSync(file(name), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
-  write('accounts.jsonl', [...readLines(file('accounts.jsonl')).filter(keep), ...results.map((r) => r.account)]);
+  write('accounts.jsonl', followerLines([...readLines(file('accounts.jsonl')).filter(keep), ...results.map((r) => r.account)], results));
   write('media.jsonl', [...readLines(file('media.jsonl')).filter(keep), ...results.flatMap((r) => r.rows)]);
   const metas = { ...readJson(file('media-meta.json'), {}) };
   for (const r of results) Object.assign(metas, r.metas);
@@ -284,7 +362,9 @@ async function fetchAll() {
   for (const acct of IG_ACCOUNTS) {
     try { const r = await fetchInstagram(acct, state); if (r) results.push(r); } catch (e) { errors++; log(`ERROR ${acct.label}: ${scrub(e.message)}`); status(state, acct, 'error', scrub(e.message)); }
   }
-  try { const r = await fetchYouTube(); if (r) results.push(r); } catch (e) { errors++; log(`ERROR YouTube: ${scrub(e.message)}`); }
+  for (const channel of Object.values(CHANNELS)) {
+    try { const r = await fetchYouTube(channel); if (r) results.push(r); } catch (e) { errors++; log(`ERROR YouTube ${channel.handle}: ${scrub(e.message)}`); }
+  }
   const metas = save(results);
   try { label(metas, markerIndex()); } catch (e) { log(`Could not read markers (${e.message}); topics come from captions`); label(metas, {}); }
   fs.writeFileSync(file('media-meta.json'), JSON.stringify(metas, null, 2) + '\n');
@@ -345,7 +425,7 @@ function writeFixtures() {
 
 // ---------- dashboard ----------
 
-const ACCOUNT_LABELS = { ...Object.fromEntries(IG_ACCOUNTS.map((a) => [a.account, a.label])), yt: 'YouTube @TheRNBasics' };
+const ACCOUNT_LABELS = { ...Object.fromEntries(IG_ACCOUNTS.map((a) => [a.account, a.label])), ...Object.fromEntries(Object.values(CHANNELS).map((c) => [ytAccount(c), `YouTube ${c.handle}`])) };
 
 /** Each Reel or video with its latest totals and the totals about a week earlier (for "this week"). */
 function buildData() {

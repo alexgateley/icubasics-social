@@ -171,7 +171,9 @@ subscribersGained), appends them to `~/basics-growth-work/analytics/*.jsonl`, an
 `~/basics-growth-work/analytics/dashboard.html` (followers over time, top 10 this week, every Reel
 and Short with filters by account, topic and slot). Topics and slots come from the markers in
 `published*/`, YouTube topics from the scheduler's `uploaded.json`. It refreshes its own keychain
-copy of each Instagram token weekly and records the date in `state.json` (`igTokens`), which the
+copy of each Instagram token weekly, keeps one follower line per account per day in `accounts.jsonl`
+(both YouTube channels too), backfills earlier days as `"estimated": true` lines where the APIs allow
+(YouTube subscribersGained − subscribersLost by day; Instagram follower_count, 100+ followers only), and records the date in `state.json` (`igTokens`), which the
 Basics Social Mac app shows.
 
     node scripts/analytics.mjs                 # fetch and rebuild the dashboard
