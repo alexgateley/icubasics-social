@@ -17,7 +17,8 @@
 //   qotd, quick10, ...), quiz_completed (mode), mock_completed, onboarding_completed, drill_answered, ...; the phones also send
 //   posthog-react-native's lifecycle events (Application Opened, Application Installed, ...). Names starting with $
 //   ($exception, $screen) do not count as activity. Application Installed has no brand (it fires before the brand
-//   is registered), so new users are counted as devices seen for the first time.
+//   is registered): installs take the brand from its $app_namespace (com.alex.icubasics, .rnbasics, .medicbasics) and
+//   the platform from $os. New users are devices seen for the first time (phones and web).
 //   Live on 2026-11-04 (first query): web app events since 2026-10-09, phones since 2026-10-19, so the first days
 //   count existing users as first seen. quiz_started, days_since_install and the site snippet are in the code
 //   (2026-11-03) but not yet in any release or on the live sites: their columns stay 0 until they ship.
@@ -27,10 +28,12 @@
 //   so a "visit" here is a page view that came from outside the site (a landing), not a unique visitor.
 //
 // Store (ANALYTICS_DIR, default ~/basics-growth-work/analytics/):
-//   posthog.jsonl        one line per day per app (kind "app": brand, platform) and per site (kind "site"); a
+//   posthog.jsonl        one line per day per app (kind "app": brand, platform; dau, wau, firstSeen = new users,
+//                        installs, answers, quizzesDone, mocksDone, onboarded, ...) and per site (kind "site"); a
 //                        refetched day replaces its lines
-//   posthog-state.json   no secrets: when and how the last fetch went, the window, and the events seen in the
-//                        last 30 days with their counts
+//   posthog-state.json   no secrets: when and how the last fetch went, the window, the events seen in the
+//                        last 30 days with their counts, and sameHour (today, yesterday and the day before, each up to
+//                        the time of the fetch, for "today so far vs yesterday at this hour")
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -51,6 +54,8 @@ const scrub = (s) => String(s).replace(/ph[xc]_[A-Za-z0-9]{10,}/g, '…');
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
 const addDays = (d, n) => new Date(Date.parse(`${d}T12:00:00Z`) + n * 86400000).toISOString().slice(0, 10);
 
+/** Seconds since midnight in Chicago, now */
+const secondsNow = () => { const [h, m, sec] = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':').map(Number); return h * 3600 + m * 60 + sec; };
 const DAY = `toDate(toTimeZone(timestamp, '${TZ}'))`;
 const APP = `properties.brand IN ('icu', 'rn', 'medic') AND properties.platform IN ('ios', 'android', 'web') AND event NOT LIKE '$%'`;
 // Referrer → source. Android apps arrive as android-app://<package> (TikTok's is com.zhiliaoapp.musically).
@@ -92,11 +97,29 @@ const queries = (days) => {
           countIf(event = 'app_opened' AND toFloat(properties.days_since_install) = 0) AS fresh
         FROM events WHERE timestamp >= toDateTime('2026-06-01 00:00:00') AND ${APP} GROUP BY distinct_id)
       WHERE day >= toDate('${from}') GROUP BY day, brand, platform ORDER BY day LIMIT 50000`,
+    // posthog-react-native's first launch after an install. It fires before the brand is registered, so the brand
+    // comes from the app's bundle id ($app_namespace) and the platform from $os (iOS and iPadOS are ios)
+    installs: `SELECT ${DAY} AS day,
+        multiIf(properties.$app_namespace LIKE '%icubasics%', 'icu', properties.$app_namespace LIKE '%rnbasics%', 'rn', properties.$app_namespace LIKE '%medicbasics%', 'medic', '') AS brand,
+        if(properties.$os = 'Android', 'android', 'ios') AS platform, count() AS installs
+      FROM events WHERE ${since} AND event = 'Application Installed'
+      GROUP BY day, brand, platform HAVING day >= toDate('${from}') AND brand != '' ORDER BY day LIMIT 50000`,
     sites: `SELECT day, site, brand, event, kind, source, count() AS n FROM (
         SELECT ${DAY} AS day, properties.site AS site, properties.brand AS brand, event, coalesce(properties.kind, '') AS kind,
           lower(coalesce(properties.$referring_domain, '')) AS r, ${SOURCE} AS source
         FROM events WHERE ${since} AND properties.$lib = 'basics-site' AND event IN ('$pageview', 'site_outbound_click'))
       WHERE day >= toDate('${from}') GROUP BY day, site, brand, event, kind, source ORDER BY day LIMIT 50000`,
+    // Today, yesterday and the day before, each counted only up to the current time of day (Chicago), so today so far
+    // can be compared with yesterday at the same hour
+    sameHour: `SELECT ${DAY} AS day, properties.brand AS brand, properties.platform AS platform,
+        count(DISTINCT distinct_id) AS dau,
+        countIf(event = 'question_answered') AS answers,
+        countIf(event = 'quiz_completed') AS quizzes_done,
+        countIf(event = 'mock_completed') AS mocks_done,
+        countIf(event = 'onboarding_completed') AS onboarded
+      FROM events WHERE timestamp >= toDateTime('${addDays(today, -3)} 00:00:00') AND ${APP}
+        AND toHour(toTimeZone(timestamp, '${TZ}')) * 3600 + toMinute(toTimeZone(timestamp, '${TZ}')) * 60 + toSecond(toTimeZone(timestamp, '${TZ}')) <= ${secondsNow()}
+      GROUP BY day, brand, platform HAVING day >= toDate('${addDays(today, -2)}') ORDER BY day LIMIT 1000`,
     events: `SELECT event, coalesce(properties.platform, if(properties.$lib = 'basics-site', 'site', '')) AS platform, count() AS n
       FROM events WHERE timestamp >= now() - INTERVAL 30 DAY GROUP BY event, platform ORDER BY n DESC LIMIT 400`,
   };
@@ -119,16 +142,17 @@ async function query(project, key, name, sql) {
 const num = (v) => Number(v) || 0;
 
 /** Query rows → store lines for the days fetched. */
-export function toLines({ daily, weekly, newUsers, sites }) {
+export function toLines({ daily, weekly, newUsers, installs, sites }) {
   const apps = new Map();
   const app = (r) => {
     const k = `${String(r.day).slice(0, 10)}|${r.brand}|${r.platform}`;
-    if (!apps.has(k)) apps.set(k, { date: String(r.day).slice(0, 10), kind: 'app', brand: r.brand, platform: r.platform, dau: 0, wau: 0, newUsers: 0, firstSeen: 0, opens: 0, answers: 0, quizzes: 0, quizzesDone: 0, mocks: 0, mocksDone: 0, onboarded: 0, drills: 0, fromSite: 0 });
+    if (!apps.has(k)) apps.set(k, { date: String(r.day).slice(0, 10), kind: 'app', brand: r.brand, platform: r.platform, dau: 0, wau: 0, newUsers: 0, firstSeen: 0, installs: 0, opens: 0, answers: 0, quizzes: 0, quizzesDone: 0, mocks: 0, mocksDone: 0, onboarded: 0, drills: 0, fromSite: 0 });
     return apps.get(k);
   };
   for (const r of daily) Object.assign(app(r), { dau: num(r.dau), opens: num(r.opens), answers: num(r.answers), quizzes: num(r.quizzes), quizzesDone: num(r.quizzes_done), mocks: num(r.mocks), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded), drills: num(r.drills), fromSite: num(r.from_site) });
   for (const r of weekly ?? []) app(r).wau = num(r.wau);
   for (const r of newUsers ?? []) Object.assign(app(r), { newUsers: num(r.new_users), firstSeen: num(r.first_seen) });
+  for (const r of installs ?? []) app(r).installs = num(r.installs);
   const siteMap = new Map();
   for (const r of sites) {
     const date = String(r.day).slice(0, 10);
@@ -170,16 +194,21 @@ export async function fetchPostHog() {
   const q = queries(days);
   try {
     const rows = {};
-    for (const name of ['daily', 'weekly', 'newUsers', 'sites']) {
+    for (const name of ['daily', 'weekly', 'newUsers', 'installs', 'sites']) {
       try { rows[name] = await query(project, key, name, q[name]); } catch (e) {
         // WAU and new users are extras: keep the daily numbers when one of them fails
-        if (name === 'weekly' || name === 'newUsers') { log(`${scrub(e.message)}; ${name} left out`); rows[name] = []; } else throw e;
+        if (name === 'weekly' || name === 'newUsers' || name === 'installs') { log(`${scrub(e.message)}; ${name} left out`); rows[name] = []; } else throw e;
       }
     }
     let events = state.events ?? [];
     try { events = (await query(project, key, 'events', q.events)).map((r) => ({ event: r.event, platform: r.platform || '', count: num(r.n) })); } catch (e) { log(`events list: ${scrub(e.message)}`); }
+    let sameHour = null;
+    try {
+      const asOf = new Date().toISOString();
+      sameHour = { asOf, rows: (await query(project, key, 'sameHour', q.sameHour)).map((r) => ({ date: String(r.day).slice(0, 10), brand: r.brand, platform: r.platform, dau: num(r.dau), answers: num(r.answers), quizzesDone: num(r.quizzes_done), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded) })) };
+    } catch (e) { log(`same-hour comparison: ${scrub(e.message)}`); }
     const lines = toLines(rows);
-    Object.assign(state, { status: 'ok', message: `${lines.length} lines for ${from} to ${today}`, checkedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), from, to: today, project, events, fake: fake || undefined });
+    Object.assign(state, { status: 'ok', message: `${lines.length} lines for ${from} to ${today}`, checkedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), from, to: today, project, events, sameHour, fake: fake || undefined });
     save(lines, from, state);
     log(`${lines.filter((l) => l.kind === 'app').length} app lines, ${lines.filter((l) => l.kind === 'site').length} site lines, ${from} to ${today}${first ? ' (first run)' : ''}`);
     return 0;

@@ -182,11 +182,11 @@ Basics Social Mac app shows.
 
 PostHog (the three Basics apps and their websites): after the social numbers, `analytics.mjs` runs
 `scripts/posthog.mjs`, which also runs from the Basics Social app's Refresh (at most hourly; the Refresh button
-forces it). Five HogQL queries against project 636811 with a read-only personal API key from the keychain
+forces it). HogQL queries against project 636811 with a read-only personal API key from the keychain
 (`sh scripts/setup-keychain.sh posthog`, which runs `scripts/setup-posthog.sh`) write one line per day per app
-(brand × platform: active devices, weekly active, devices first seen, answers, finished sessions and mocks,
+(brand × platform: active devices, weekly active, new users (devices first seen), installs (phones, by bundle id), answers, finished sessions and mocks,
 onboarding) and per site (visits by source: Instagram, TikTok, YouTube, search, direct, other; store and web-app
-taps) to `~/basics-growth-work/analytics/posthog.jsonl`: 90 days on the first run, the last 14 days after that.
+taps) to `~/basics-growth-work/analytics/posthog.jsonl`: 90 days on the first run, the last 14 days after that. A sixth query counts today, yesterday and the day before up to the current time of day (Central), for "today vs yesterday at the same time".
 The app shows them on its App usage tab and in "Social → app" on the Growth tab.
 
     node scripts/posthog.mjs                   # fetch now

@@ -20,6 +20,10 @@ const lift = (n) => 1 + ([1, 3, 5].includes(new Date(`${day(n)}T12:00:00Z`).getU
 
 function answer(name) {
   const rows = [];
+  if (name === 'sameHour') {
+    for (let n = 2; n >= 0; n--) for (const b of Object.keys(BRANDS)) for (const p of Object.keys(PLATFORMS)) rows.push([day(n), b, p, 3 + n, 40 + 5 * n, 3, 0, 1]);
+    return { columns: ['day', 'brand', 'platform', 'dau', 'answers', 'quizzes_done', 'mocks_done', 'onboarded'], results: rows };
+  }
   if (name === 'events') {
     for (const [e, c] of [['question_answered', 13872], ['answer_rated', 3744], ['app_opened', 1241], ['quiz_completed', 678], ['onboarding_completed', 147], ['$pageview', 900]]) rows.push([e, e === '$pageview' ? 'site' : 'ios', c]);
     return { columns: ['event', 'platform', 'n'], results: rows };
@@ -42,6 +46,7 @@ function answer(name) {
         const dau = Math.round(6 * bw * pw * grow * (0.8 + rand() * 0.4) * (1 + (lift(n) - 1) * 0.3));
         if (name === 'daily') rows.push([d, b, p, dau, dau + 2, dau * 14, 0, Math.round(dau * 0.8), 0, Math.round(dau / 20), Math.round(dau / 15), Math.round(dau * 0.4), p === 'web' ? Math.round(dau / 6) : 0]);
         if (name === 'weekly') rows.push([d, b, p, Math.round(dau * 3.2)]);
+        if (name === 'installs' && p !== 'web') rows.push([d, b, p, Math.round(dau * 0.25 * lift(n))]);
         if (name === 'newUsers') { const f = Math.round(dau * 0.3 * lift(n)); rows.push([d, b, p, f, 0]); }
       }
     }
@@ -50,6 +55,7 @@ function answer(name) {
     daily: ['day', 'brand', 'platform', 'dau', 'opens', 'answers', 'quizzes', 'quizzes_done', 'mocks', 'mocks_done', 'onboarded', 'drills', 'from_site'],
     weekly: ['day', 'brand', 'platform', 'wau'],
     newUsers: ['day', 'brand', 'platform', 'first_seen', 'new_users'],
+    installs: ['day', 'brand', 'platform', 'installs'],
     sites: ['day', 'site', 'brand', 'event', 'kind', 'source', 'n'],
   }[name];
   return { columns, results: rows };
