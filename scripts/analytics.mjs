@@ -21,6 +21,8 @@
 //                    (igTokens.<account>.refreshedAt / expiresAt; igRefreshedAt is the older copy of refreshedAt)
 //                    and how the last fetch went (igAccounts.<account>.status: ok, missing (no token), error)
 //   dashboard.html   static page built from the above
+//   posthog.jsonl, posthog-state.json   app and website usage from PostHog (scripts/posthog.mjs, run here after the
+//                    social numbers; also run by the Basics Social app's Refresh)
 //
 // Metric names checked against the docs on 2026-11-03:
 //   Instagram media insights (graph.instagram.com, Instagram API with Instagram Login, needs
@@ -41,6 +43,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readSecret, writeSecret } from './keychain.mjs';
 import { CHANNELS } from './youtube-channels.mjs';
+import { fetchPostHog } from './posthog.mjs';
 
 const TZ = 'America/Chicago';
 const GRAPH = 'https://graph.instagram.com/v25.0';
@@ -369,6 +372,7 @@ async function fetchAll() {
   try { label(metas, markerIndex()); } catch (e) { log(`Could not read markers (${e.message}); topics come from captions`); label(metas, {}); }
   fs.writeFileSync(file('media-meta.json'), JSON.stringify(metas, null, 2) + '\n');
   fs.writeFileSync(file('state.json'), JSON.stringify(state, null, 2) + '\n');
+  try { errors += await fetchPostHog(); } catch (e) { errors++; log(`ERROR PostHog: ${e.message}`); }
   return errors;
 }
 

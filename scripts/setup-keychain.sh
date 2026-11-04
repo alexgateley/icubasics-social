@@ -91,6 +91,7 @@ setup_one() {
 }
 
 ACCOUNT="${1:-icu}"
+if [ "$ACCOUNT" = posthog ]; then exec sh "$(dirname "$0")/setup-posthog.sh"; fi
 if [ "$ACCOUNT" = all ]; then
   echo "Storing analytics credentials for all seven Instagram accounts. Press Enter at a token prompt to skip one."
   STORED=""; SKIPPED=""; FAILED=""

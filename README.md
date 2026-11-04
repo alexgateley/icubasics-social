@@ -180,6 +180,18 @@ Basics Social Mac app shows.
     node scripts/analytics.mjs dashboard       # rebuild only
     FIXTURES=1 ANALYTICS_DIR=/tmp/a node scripts/analytics.mjs   # made-up data, no network
 
+PostHog (the three Basics apps and their websites): after the social numbers, `analytics.mjs` runs
+`scripts/posthog.mjs`, which also runs from the Basics Social app's Refresh (at most hourly; the Refresh button
+forces it). Five HogQL queries against project 636811 with a read-only personal API key from the keychain
+(`sh scripts/setup-keychain.sh posthog`, which runs `scripts/setup-posthog.sh`) write one line per day per app
+(brand × platform: active devices, weekly active, devices first seen, answers, finished sessions and mocks,
+onboarding) and per site (visits by source: Instagram, TikTok, YouTube, search, direct, other; store and web-app
+taps) to `~/basics-growth-work/analytics/posthog.jsonl`: 90 days on the first run, the last 14 days after that.
+The app shows them on its App usage tab and in "Social → app" on the Growth tab.
+
+    node scripts/posthog.mjs                   # fetch now
+    ANALYTICS_DIR=/tmp/p node --import ./scripts/posthog-fake-api.mjs scripts/posthog.mjs   # made-up answers, no network
+
 ## Later: Facebook Reels and Threads
 
 Not built. Each would be a step after "Publish today's post" that reads the same marker and
