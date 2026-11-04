@@ -132,6 +132,23 @@ are in the login keychain (`sh scripts/setup-youtube.sh`). Setup and details:
     node scripts/youtube-schedule.mjs --all                 # upload and schedule what is not uploaded yet
     node scripts/youtube-schedule.mjs reschedule-file "<CLAUDE TASK - Reschedule ....md>" --dry-run
 
+## TikTok (posting page on the Mac; app in TikTok's sandbox)
+
+TikTok posts go through TikTok's Content Posting API from a local page on Alex's Mac,
+`scripts/tiktok-poster.mjs` (http://127.0.0.1:8765/). It lists the shorts in
+`~/Desktop/Social Media Uploads/<topic>/short - <Brand> Basics.mp4` with the TikTok caption from
+`short - captions and tags.txt`, and posts the one Alex picks with the screen TikTok requires for Direct
+Post (creator info, privacy chosen by hand, interaction settings, commercial-content disclosure, the
+Music Usage declaration, preview, status). There is no scheduled posting: TikTok requires the user's
+consent to each post. The app is unaudited, so posts are "Only me" to a private account until TikTok
+approves it. Requirements with sources and Alex's steps: [docs/tiktok-setup.md](docs/tiktok-setup.md);
+review texts and the demo-video script: [docs/tiktok-audit.md](docs/tiktok-audit.md).
+
+    sh scripts/setup-tiktok.sh                 # once: sandbox or production key, then sign in (keychain)
+    node scripts/tiktok-auth.mjs rn check      # read-only check
+    node scripts/tiktok-poster.mjs             # the posting page
+    node scripts/tiktok-test.mjs               # offline tests against scripts/tiktok-fake-api.mjs
+
 ## Analytics (on the Mac only)
 
 Instagram insights are private and this repository is public, so analytics never run in Actions and
