@@ -8,6 +8,8 @@
 //   node scripts/analytics.mjs             # fetch tonight's numbers, then rebuild the dashboard
 //   node scripts/analytics.mjs fetch       # fetch only
 //   node scripts/analytics.mjs dashboard   # rebuild dashboard.html from what is stored
+//   node scripts/analytics.mjs --only instagram      # Instagram only; YouTube calls none and keeps its stored numbers
+//   INSIGHTS_DAYS=7 node scripts/analytics.mjs       # ask only about Reels from the last 7 days; older Reels keep their lines
 //   FIXTURES=1 ANALYTICS_DIR=/tmp/x node scripts/analytics.mjs   # made-up data, no network (testing)
 //
 // Store (ANALYTICS_DIR, default ~/basics-growth-work/analytics/):
@@ -52,6 +54,18 @@ const fixtures = process.env.FIXTURES === '1';
 // Reels older than this keep their last stored numbers instead of being fetched every night
 const INSIGHTS_DAYS = Number(process.env.INSIGHTS_DAYS || 120);
 const REFRESH_DAYS = 7;
+
+// --only instagram skips YouTube. Anything else starting with -- stops here, before any call, so a typo can never become a full fetch.
+const args = process.argv.slice(2);
+const onlyAt = args.indexOf('--only');
+const only = onlyAt >= 0 ? args[onlyAt + 1] : null;
+const positional = args.filter((_, i) => onlyAt < 0 || (i !== onlyAt && i !== onlyAt + 1));
+if ((onlyAt >= 0 && only !== 'instagram') || positional.some((a) => a.startsWith('--'))) {
+  console.error('Usage: node scripts/analytics.mjs [fetch|dashboard] [--only instagram]');
+  process.exit(2);
+}
+// A partial run asks about only some Reels or sources, so what it did not ask about (or could not read) must keep its lines.
+const partial = Boolean(only) || process.env.INSIGHTS_DAYS !== undefined;
 
 // Keychain names IG_USER_ID<suffix> / IG_ACCESS_TOKEN<suffix> (sh scripts/setup-keychain.sh <account>).
 // userId is the account's Instagram user ID (not secret), used when the keychain has a token but no ID.
@@ -126,7 +140,9 @@ async function reelInsights(token, id) {
 
 /** Records how an account's last fetch went, for the Basics Social app's "needs setup" list. */
 function status(state, acct, value, message) {
-  (state.igAccounts ??= {})[acct.account] = { label: acct.label, status: value, checkedAt: new Date().toISOString(), message };
+  const at = new Date().toISOString();
+  const okAt = value === 'ok' ? at : state.igAccounts?.[acct.account]?.okAt;
+  (state.igAccounts ??= {})[acct.account] = { label: acct.label, status: value, checkedAt: at, message, ...(okAt && { okAt }) };
 }
 
 async function fetchInstagram(acct, state) {
@@ -344,14 +360,26 @@ function followerLines(lines, results) {
   return [...byDay.values()].sort((a, b) => key(a).localeCompare(key(b)) || a.date.localeCompare(b.date));
 }
 
-/** Replaces tonight's lines for the accounts that were fetched (a second run the same night overwrites). */
+// Written whole and then renamed, so the Basics Social app can read these at any moment during a daytime pull.
+function writeWhole(f, text) {
+  const tmp = `${f}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, text);
+  fs.renameSync(tmp, f);
+}
+
+/** Replaces tonight's lines for the accounts that were fetched (a second run the same night overwrites).
+ *  A partial run replaces only the lines of Reels it read today: a Reel outside its window, or one whose views could
+ *  not be read, keeps the line it has, even one written earlier today. */
 function save(results) {
   fs.mkdirSync(DIR, { recursive: true });
   const fetched = new Set(results.map((r) => `${r.account.platform}:${r.account.account}`));
   const keep = (row) => !(row.date === today && fetched.has(`${row.platform}:${row.account}`));
-  const write = (name, rows) => fs.writeFileSync(file(name), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  const write = (name, rows) => writeWhole(file(name), rows.map((r) => JSON.stringify(r)).join('\n') + '\n');
+  const newRows = results.flatMap((r) => r.rows).filter((r) => !partial || r.platform !== 'instagram' || r.views != null);
+  const newIds = new Set(newRows.map((r) => r.id));
+  const keepMedia = partial ? (row) => !(row.date === today && newIds.has(row.id)) : keep;
   write('accounts.jsonl', followerLines([...readLines(file('accounts.jsonl')).filter(keep), ...results.map((r) => r.account)], results));
-  write('media.jsonl', [...readLines(file('media.jsonl')).filter(keep), ...results.flatMap((r) => r.rows)]);
+  write('media.jsonl', [...readLines(file('media.jsonl')).filter(keepMedia), ...newRows]);
   const metas = { ...readJson(file('media-meta.json'), {}) };
   for (const r of results) Object.assign(metas, r.metas);
   return metas;
@@ -364,13 +392,15 @@ async function fetchAll() {
   for (const acct of IG_ACCOUNTS) {
     try { const r = await fetchInstagram(acct, state); if (r) results.push(r); } catch (e) { errors++; log(`ERROR ${acct.label}: ${scrub(e.message)}`); status(state, acct, 'error', scrub(e.message)); }
   }
-  for (const channel of Object.values(CHANNELS)) {
+  for (const channel of only === 'instagram' ? [] : Object.values(CHANNELS)) {
     try { const r = await fetchYouTube(channel); if (r) results.push(r); } catch (e) { errors++; log(`ERROR YouTube ${channel.handle}: ${scrub(e.message)}`); }
   }
   const metas = save(results);
-  try { label(metas, markerIndex()); } catch (e) { log(`Could not read markers (${e.message}); topics come from captions`); label(metas, {}); }
-  fs.writeFileSync(file('media-meta.json'), JSON.stringify(metas, null, 2) + '\n');
-  fs.writeFileSync(file('state.json'), JSON.stringify(state, null, 2) + '\n');
+  // label() rewrites what it is given in place; a partial run gives it only what it fetched, so the rest stays as stored
+  const toLabel = partial ? Object.fromEntries(results.flatMap((r) => Object.keys(r.metas)).map((id) => [id, metas[id]])) : metas;
+  try { label(toLabel, markerIndex()); } catch (e) { log(`Could not read markers (${e.message}); topics come from captions`); label(toLabel, {}); }
+  writeWhole(file('media-meta.json'), JSON.stringify(metas, null, 2) + '\n');
+  writeWhole(file('state.json'), JSON.stringify(state, null, 2) + '\n');
   return errors;
 }
 
@@ -460,7 +490,7 @@ function writeDashboard() {
   log(`Dashboard: ${file('dashboard.html')}`);
 }
 
-const mode = process.argv[2] ?? 'all';
+const mode = positional[0] ?? 'all';
 let errors = 0;
 if (fixtures) writeFixtures();
 else if (mode !== 'dashboard') errors = await fetchAll();
