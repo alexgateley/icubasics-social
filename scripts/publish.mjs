@@ -84,6 +84,7 @@ async function refreshToken() {
     return;
   }
   fs.writeFileSync('new-token.txt', json.access_token);
+  fs.writeFileSync('new-token-expires-in.txt', String(json.expires_in));
   console.log(`Token refreshed; valid for ${Math.round(json.expires_in / 86400)} more days`);
 }
 
