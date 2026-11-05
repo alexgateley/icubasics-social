@@ -114,3 +114,89 @@ made in the QuizApp repo by `scripts/social/recap.sh <brand> <first Sunday> <las
 ## Afternoon explainer series (since 2026-11-02)
 
 A second explainer series posts from **3 PM Chicago** (kind `afternoon`), from `shorts-pm/<brand>/schedule.json`, alongside the noon series. Schedule with `SLOT=pm node scripts/add-short.mjs "<topic folder>" <date> [slug]`, then commit and push. The Mac kicks it at 3:05 and 5:05 PM Chicago (`launchd/com.icubasics.afternoon.plist`; install it like the other agents).
+
+## YouTube (@TheRNBasics, scheduled from the Mac)
+
+Basics has one YouTube channel, @TheRNBasics, and it always gets the RN version. It releases one
+topic per day: the topic's long at 9:00 AM Pacific and its Shorts right after (9:05, 9:10, ...).
+Nothing about YouTube runs in GitHub Actions. `scripts/youtube-schedule.mjs` runs on Alex's Mac and
+uploads the kits in `~/Desktop/YouTube Uploads - TheRNBasics/<day>/<n> LONG|SHORT - <name>/` (video,
+`upload.txt`, and for longs `thumbnail.png` and `captions.srt`) as private videos with the publish time
+from `upload.txt`, then sets the long's thumbnail and captions and adds each video to the suggested
+playlists that exist. Its record of what is uploaded is `~/basics-growth-work/youtube/uploaded.json`
+(never this repository), and it also skips any kit whose title is already on the channel. Credentials
+are in the login keychain (`sh scripts/setup-youtube.sh`). Setup and details:
+[docs/youtube-setup.md](docs/youtube-setup.md).
+
+    node scripts/youtube-schedule.mjs --dry-run --all       # the plan: PT and UTC times, quota, hand-work
+    node scripts/youtube-schedule.mjs --all                 # upload and schedule what is not uploaded yet
+    node scripts/youtube-schedule.mjs reschedule-file "<CLAUDE TASK - Reschedule ....md>" --dry-run
+
+The same scheduler also serves Rhea's channel, @Rheafi, with `--channel rheafi` (its own refresh
+token `YT_REFRESH_TOKEN_RHEAFI`, kits in `~/Desktop/YouTube Uploads - Rheafi/`, record
+`~/basics-growth-work/youtube/uploaded-rheafi.json`, and the Rhea description rules instead of the
+three app links). Without `--channel` everything is @TheRNBasics as before.
+
+    sh scripts/setup-youtube.sh --channel rheafi            # one-time sign-in to @Rheafi
+    node scripts/youtube-schedule.mjs --channel rheafi --dry-run --all
+
+## TikTok (posting page on the Mac; app in TikTok's sandbox)
+
+TikTok posts go through TikTok's Content Posting API from a local page on Alex's Mac,
+`scripts/tiktok-poster.mjs` (http://127.0.0.1:8765/). It lists the shorts in
+`~/Desktop/Social Media Uploads/<topic>/short - <Brand> Basics.mp4` with the TikTok caption from
+`short - captions and tags.txt`, and posts the one Alex picks with the screen TikTok requires for Direct
+Post (creator info, privacy chosen by hand, interaction settings, commercial-content disclosure, the
+Music Usage declaration, preview, status). There is no scheduled posting: TikTok requires the user's
+consent to each post. The app is unaudited, so posts are "Only me" to a private account until TikTok
+approves it. Requirements with sources and Alex's steps: [docs/tiktok-setup.md](docs/tiktok-setup.md);
+review texts and the demo-video script: [docs/tiktok-audit.md](docs/tiktok-audit.md).
+
+    sh scripts/setup-tiktok.sh                 # once: sandbox or production key, then sign in (keychain)
+    node scripts/tiktok-auth.mjs rn check      # read-only check
+    node scripts/tiktok-poster.mjs             # the posting page
+    node scripts/tiktok-test.mjs               # offline tests against scripts/tiktok-fake-api.mjs
+
+## Analytics (on the Mac only)
+
+Instagram insights are private and this repository is public, so analytics never run in Actions and
+nothing is committed here. `scripts/analytics.mjs` runs nightly on Alex's Mac
+(`launchd/com.icubasics.analytics.plist`, 2:05 AM Pacific) with credentials from the login keychain
+(`scripts/setup-keychain.sh <account>` or `all` for Instagram, `scripts/setup-youtube.sh` for YouTube). It reads
+per-Reel insights for every Instagram account with a keychain token (icu, rn, medic, rhea, winery,
+franchifi, gripwheels; the others are skipped with a note) (views, reach, saved, shares, likes, comments,
+total_interactions, ig_reels_avg_watch_time, ig_reels_video_view_total_time), follower counts, and
+per-video YouTube Analytics (views, estimatedMinutesWatched, averageViewDuration, likes,
+subscribersGained), appends them to `~/basics-growth-work/analytics/*.jsonl`, and rebuilds
+`~/basics-growth-work/analytics/dashboard.html` (followers over time, top 10 this week, every Reel
+and Short with filters by account, topic and slot). Topics and slots come from the markers in
+`published*/`, YouTube topics from the scheduler's `uploaded.json`. It refreshes its own keychain
+copy of each Instagram token weekly, keeps one follower line per account per day in `accounts.jsonl`
+(both YouTube channels too), backfills earlier days as `"estimated": true` lines where the APIs allow
+(YouTube subscribersGained − subscribersLost by day; Instagram follower_count, 100+ followers only), and records the date in `state.json` (`igTokens`), which the
+Basics Social Mac app shows.
+
+    node scripts/analytics.mjs                 # fetch and rebuild the dashboard
+    node scripts/analytics.mjs dashboard       # rebuild only
+    FIXTURES=1 ANALYTICS_DIR=/tmp/a node scripts/analytics.mjs   # made-up data, no network
+
+PostHog (the three Basics apps and their websites): `scripts/posthog.mjs` runs only from a manual Refresh in the Basics Social app, never from the nightly job, because PostHog usage is metered. HogQL queries with a read-only personal API key from the keychain
+(`sh scripts/setup-keychain.sh posthog`, which runs `scripts/setup-posthog.sh`) write one line per day per app
+(brand × platform: active devices, weekly active, new users (devices first seen), installs (phones, by bundle id), answers, finished sessions and mocks,
+onboarding) and per site (visits by source: Instagram, TikTok, YouTube, search, direct, other; store and web-app
+taps) to `~/basics-growth-work/analytics/posthog.jsonl`: 90 days on the first run, the last 14 days after that. A sixth query counts today, yesterday and the day before up to the current time of day (Central), for "today vs yesterday at the same time".
+The app shows them on its App usage tab and in "Social → app" on the Growth tab.
+
+    node scripts/posthog.mjs                   # fetch now
+    ANALYTICS_DIR=/tmp/p node --import ./scripts/posthog-fake-api.mjs scripts/posthog.mjs   # made-up answers, no network
+
+## Later: Facebook Reels and Threads
+
+Not built. Each would be a step after "Publish today's post" that reads the same marker and
+`reel.mp4` URL on GitHub Pages and writes its own marker folder (`published-facebook/`,
+`published-threads/`). Facebook Reels use the Pages API
+(`/<page-id>/video_reels`, upload phase start → transfer by `file_url` → finish) with a Page token
+from the same Meta app; Threads uses `graph.threads.net` (`/<threads-user-id>/threads` with
+`media_type=VIDEO` and `video_url`, then `/threads_publish`) with its own Threads token. Analytics
+would add one fetch function each to `analytics.mjs` (Page video insights; Threads `/insights` with
+views, likes, replies, reposts, quotes, shares) and one more account card on the dashboard.
