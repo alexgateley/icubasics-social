@@ -47,7 +47,12 @@ jobs:
       cancel-in-progress: false
     if: ${{ github.event_name == 'schedule' || inputs.brand == 'all' || inputs.brand == '' }}
     steps:
+      # ref: the branch as it is when this step runs, not the commit the run was queued with. Runs queue
+      # behind each other (concurrency above), so a run created while another was posting would
+      # otherwise check out main from before that post's marker and post the same date again.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -158,7 +163,12 @@ jobs:
       group: post-${{ inputs.brand }}
       cancel-in-progress: false
     steps:
+      # ref: the branch as it is when this step runs, not the commit the run was queued with. Runs queue
+      # behind each other (concurrency above), so a run created while another was posting would
+      # otherwise check out main from before that post's marker and post the same date again.
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
