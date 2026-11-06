@@ -41,5 +41,22 @@
   "2026-12-14": "trauma-bleeding-before-airway",
   "2026-12-15": "trauma-permissive-hypotension",
   "2026-12-16": "trauma-tension-pneumothorax",
-  "2026-12-17": "trauma-rule-of-nines-and-parkland"
+  "2026-12-17": "trauma-rule-of-nines-and-parkland",
+  "2026-12-18": "abx-vancomycin-flushing",
+  "2026-12-19": "iso-airborne-precautions",
+  "2026-12-20": "resp-steroids-take-hours",
+  "2026-12-21": "abx-trough-before-dose",
+  "2026-12-22": "iso-droplet-vs-contact",
+  "2026-12-23": "abx-aminoglycosides",
+  "2026-12-24": "iso-cdiff-soap",
+  "2026-12-25": "abx-pcn-allergy-cephalosporins",
+  "2026-12-26": "psych-lithium-toxicity-ladder",
+  "2026-12-27": "psych-low-salt-lithium",
+  "2026-12-28": "psych-maois-aged-cheese",
+  "2026-12-29": "psych-atypicals-nms",
+  "2026-12-30": "psych-serotonin-vs-nms",
+  "2026-12-31": "ob-magnesium-toxicity",
+  "2027-01-01": "ob-severe-range-bp",
+  "2027-01-02": "ob-pph-hands-first",
+  "2027-01-03": "ob-calcium-gluconate"
 }
