@@ -1,0 +1,8 @@
+Ca, Phos and Mg in the ICU: the small numbers that cause big rhythms ⚡
+Low albumin makes total calcium read falsely low; the 0.8 correction often misleads in critical illness, so check an ionized calcium.
+Hypocalcemia: tetany, Chvostek and Trousseau signs, long QTc, seizures.
+Low Mg keeps K and Ca low and can make them hard to correct: replace Mg along with them. Torsades: magnesium 2 g IV per protocol.
+Mg toxicity: deep tendon reflexes fade, then disappear near 10 mEq/L (about 12 mg/dL), then respiratory depression. Stop the infusion; IV calcium gluconate antagonizes the effects (it does not lower the level).
+Refeeding: phosphorus can crash; watch potassium and magnesium too.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#icunurse #electrolytes #ccrn #criticalcare #hypomagnesemia

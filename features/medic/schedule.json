@@ -33,5 +33,10 @@
   "2026-11-07": "stats",
   "2026-11-09": "sb-heparin-antidotes",
   "2026-11-10": "sb-heparin-aptt-vs-inr",
-  "2026-11-11": "sb-stemi-reciprocal"
+  "2026-11-11": "sb-stemi-reciprocal",
+  "2026-11-12": "rp-potassium",
+  "2026-11-13": "rp-resp-albuterol-vs-ipratropium",
+  "2026-11-14": "rp-calcium-phosphorus-magnesium",
+  "2026-11-15": "rp-sb-pharm-01-beta-blockers",
+  "2026-11-16": "rp-sb-pharm-02-adenosine"
 }
