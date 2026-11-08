@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Comment-to-get: every 10 minutes, DMs the free page to anyone who commented a keyword on a recent Reel
+       (scripts/comment-replies.mjs). Runs on this Mac only; tokens come from the login keychain.
+       Install only after the setup steps at the top of scripts/comment-replies.mjs and a passing test:
+       cp launchd/com.icubasics.comments.plist ~/Library/LaunchAgents/ && launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.icubasics.comments.plist
+       Stop: launchctl bootout gui/$(id -u)/com.icubasics.comments -->
+  <key>Label</key>
+  <string>com.icubasics.comments</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/node</string>
+    <string>/Users/alex/.gemini/antigravity-ide/scratch/icubasics-social/scripts/comment-replies.mjs</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>600</integer>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-comments.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/alex/Library/Logs/icubasics-comments.log</string>
+  <key>RunAtLoad</key>
+  <true/>
+</dict>
+</plist>

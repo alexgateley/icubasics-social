@@ -200,3 +200,24 @@ from the same Meta app; Threads uses `graph.threads.net` (`/<threads-user-id>/th
 `media_type=VIDEO` and `video_url`, then `/threads_publish`) with its own Threads token. Analytics
 would add one fetch function each to `analytics.mjs` (Page video insights; Threads `/insights` with
 views, likes, replies, reposts, quotes, shares) and one more account card on the dashboard.
+
+## Comment-to-get (DM the free one-pager)
+
+When someone comments a keyword ("SEPSIS") on a Reel from the last 7 days, `scripts/comment-replies.mjs`
+sends them one private reply (an Instagram DM tied to that comment) with the matching page on the brand's site
+and answers the comment publicly ("Sent you a DM 📩"). Keywords, aliases, the page per brand and the slug →
+keyword map are in `comment-keywords.json`; a brand without a page for a keyword gets no DM. Runs only on the
+Mac (`launchd/com.icubasics.comments.plist`, every 10 minutes), with the keychain tokens; what was answered
+is stored in `~/basics-growth-work/analytics/comment-replies.json`, never in this public repository.
+
+Setup, once per account:
+1. Instagram app → Settings → Messages and story replies → Message controls → Connected tools →
+   **Allow access to messages** on.
+2. A token with `instagram_business_basic`, `instagram_business_manage_comments` and
+   `instagram_business_manage_messages`, stored with `sh scripts/setup-keychain.sh <icu|rn|medic>`.
+3. `node scripts/comment-replies.mjs --check` (read-only), then have someone without a role on the Meta app
+   comment a keyword, run `DRY_RUN=1 node scripts/comment-replies.mjs`, then `node scripts/comment-replies.mjs`.
+4. Install the launch agent (command in the plist), then add the "Comment X" line to queued captions:
+   `node scripts/add-keyword-cta.mjs` (preview), `--apply`, commit, push. `--remove --apply` takes it out.
+
+Tests: `node --test scripts/comment-replies.test.mjs` (fake Instagram, no network).
