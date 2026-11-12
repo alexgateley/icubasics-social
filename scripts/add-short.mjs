@@ -8,12 +8,15 @@
 //   node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]
 //   SLOT=pm node scripts/add-short.mjs ...   # the afternoon series instead (shorts-pm/, posts from 3 PM Chicago)
 //   SLOT=am node scripts/add-short.mjs ...   # the morning series (shorts-am/, posts from 7 AM Chicago)
+//   SLOT=evening node scripts/add-short.mjs ... # the 6 PM slot (features/, posts from 6 PM Chicago in place of a feature Reel)
+//   ONLY=icu,rn node scripts/add-short.mjs ...   # only these brands (each brand can have its own date)
 import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 
 const [folderArg, date, slugArg] = process.argv.slice(2);
-const ROOT = { pm: 'shorts-pm', am: 'shorts-am' }[process.env.SLOT] ?? 'shorts';
+const ROOT = { pm: 'shorts-pm', am: 'shorts-am', evening: 'features' }[process.env.SLOT] ?? 'shorts';
+const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 if (!folderArg || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
   console.error('Usage: node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]');
   process.exit(1);
@@ -42,6 +45,7 @@ function caption(brand) {
 }
 
 for (const brand of Object.keys(BRANDS)) {
+  if (ONLY && !ONLY.includes(brand)) continue;
   const video = path.join(src, `short - ${NAMES[brand]}.mp4`);
   if (!fs.existsSync(video)) { console.log(`${brand}: no video in ${src}; skipped`); continue; }
   const cap = caption(brand);
