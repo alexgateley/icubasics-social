@@ -74,6 +74,8 @@ const IG_ACCOUNTS = [
   { account: 'icu', label: '@icubasics', suffix: '', userId: '17841423460793482' },
   { account: 'rn', label: '@rnbasicsnclex', suffix: '_RN', userId: '17841429422921068' },
   { account: 'medic', label: '@themedicbasics', suffix: '_MEDIC', userId: '17841420840594491' },
+  // No ID on file yet: setup-keychain.sh rt stores the one from the Meta dashboard
+  { account: 'rt', label: '@respiratorytherapybasics', suffix: '_RT', userId: '' },
   { account: 'rhea', label: '@runonrhea', suffix: '_RHEA', userId: '17841426819974871' },
   { account: 'winery', label: '@thewinerybooks', suffix: '_WINERY', userId: '17841433053134440' },
   { account: 'franchifi', label: '@franchifi', suffix: '_FRANCHIFI', userId: '17841451921105656' },
@@ -151,6 +153,11 @@ async function fetchInstagram(acct, state) {
   if (!token) {
     log(`${acct.label}: no token in the keychain (sh scripts/setup-keychain.sh ${acct.account}); skipped`);
     status(state, acct, 'missing', `no token in the keychain: sh scripts/setup-keychain.sh ${acct.account}`);
+    return null;
+  }
+  if (!userId) {
+    log(`${acct.label}: no Instagram user ID in the keychain (sh scripts/setup-keychain.sh ${acct.account}); skipped`);
+    status(state, acct, 'missing', `no user ID in the keychain: sh scripts/setup-keychain.sh ${acct.account}`);
     return null;
   }
   token = await maybeRefresh(acct, token, state);
@@ -297,7 +304,7 @@ async function fetchYouTube(channel) {
 function markerIndex() {
   const git = (args, input) => execFileSync('git', ['-C', REPO_DIR, ...args], { encoding: 'utf8', input, maxBuffer: 64 << 20, stdio: ['pipe', 'pipe', 'ignore'] });
   try { git(['fetch', '-q', 'origin', 'main']); } catch { log('git fetch failed; using the last fetched origin/main'); }
-  const paths = git(['ls-tree', '-r', '--name-only', 'origin/main', '--', 'published', 'published-rn', 'published-medic'])
+  const paths = git(['ls-tree', '-r', '--name-only', 'origin/main', '--', 'published', 'published-rn', 'published-medic', 'published-rt'])
     .split('\n').filter((p) => p.endsWith('.json'));
   const out = Buffer.from(git(['cat-file', '--batch'], paths.map((p) => `origin/main:${p}`).join('\n') + '\n'), 'utf8');
   const index = {};
@@ -310,7 +317,7 @@ function markerIndex() {
     at = nl + 1 + size + 1;
     try {
       const m = JSON.parse(body);
-      const brand = p.startsWith('published-rn') ? 'rn' : p.startsWith('published-medic') ? 'medic' : 'icu';
+      const brand = p.startsWith('published-rn') ? 'rn' : p.startsWith('published-medic') ? 'medic' : p.startsWith('published-rt') ? 'rt' : 'icu';
       if (m.mediaId) index[m.mediaId] = { kind: m.kind, folder: m.folder, brand };
     } catch { /* not a marker */ }
   }
@@ -414,8 +421,8 @@ function writeFixtures() {
   const only = process.env.FIXTURE_ACCOUNTS?.split(',');
   const igFixture = IG_ACCOUNTS.filter((a) => !only || only.includes(a.account));
   const accounts = [...igFixture.map((a) => ({ platform: 'instagram', account: a.account })), { platform: 'youtube', account: 'yt' }];
-  const baseFollowers = { icu: 420, rn: 1350, medic: 260, rhea: 610, winery: 180, franchifi: 95, gripwheels: 40, yt: 85 };
-  const growth = { icu: 6, rn: 14, medic: 4, rhea: 5, winery: 2, franchifi: 1, gripwheels: 1, yt: 3 };
+  const baseFollowers = { icu: 420, rn: 1350, medic: 260, rt: 30, rhea: 610, winery: 180, franchifi: 95, gripwheels: 40, yt: 85 };
+  const growth = { icu: 6, rn: 14, medic: 4, rt: 1, rhea: 5, winery: 2, franchifi: 1, gripwheels: 1, yt: 3 };
   let seed = 7;
   const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const acc = [];

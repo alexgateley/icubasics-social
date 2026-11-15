@@ -1,4 +1,4 @@
-// Comment-to-get for @icubasics, @rnbasicsnclex and @themedicbasics. When someone comments a keyword from
+// Comment-to-get for @icubasics, @rnbasicsnclex, @themedicbasics and @respiratorytherapybasics. When someone comments a keyword from
 // comment-keywords.json on a recent Reel ("SEPSIS"), this sends them one private reply (an Instagram DM tied to
 // that comment) with the matching free page on the brand's site, and answers the comment publicly ("Sent you a
 // DM 📩"). Runs ONLY on Alex's Mac (launchd/com.icubasics.comments.plist, every 10 minutes): tokens come from the
@@ -41,6 +41,8 @@ const ACCOUNTS = [
   { account: 'icu', suffix: '', userId: '17841423460793482', handle: 'icubasics' },
   { account: 'rn', suffix: '_RN', userId: '17841429422921068', handle: 'rnbasicsnclex' },
   { account: 'medic', suffix: '_MEDIC', userId: '17841420840594491', handle: 'themedicbasics' },
+  // No ID on file yet: read from the keychain (setup-keychain.sh rt)
+  { account: 'rt', suffix: '_RT', userId: '', handle: 'respiratorytherapybasics' },
 ].filter((a) => !process.env.ACCOUNTS || process.env.ACCOUNTS.split(',').includes(a.account));
 
 const log = (msg) => console.log(`${new Date().toISOString()} ${msg}`);
@@ -116,6 +118,8 @@ async function comments(token, mediaId) {
 async function runAccount(acct, state, budget) {
   const token = readSecret(`IG_ACCESS_TOKEN${acct.suffix}`);
   if (!token) { log(`@${acct.handle}: no token in the keychain (sh scripts/setup-keychain.sh ${acct.account}); skipped`); return 0; }
+  if (!acct.userId) acct.userId = readSecret(`IG_USER_ID${acct.suffix}`);
+  if (!acct.userId) { log(`@${acct.handle}: no Instagram user ID in the keychain (sh scripts/setup-keychain.sh ${acct.account}); skipped`); return 0; }
   const reels = await recentReels(token, acct);
   if (CHECK) {
     const withComments = reels.find((m) => m.comments_count > 0);

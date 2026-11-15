@@ -45,6 +45,12 @@ test('message names the brand and the full link; no page means no message', () =
   assert.equal(messageFor('STEMI', 'rn'), null);
 });
 
+test('rt has a site and a name but no pages yet, so it gets no DM', () => {
+  assert.equal(config.sites.rt, 'https://respiratorybasics.com');
+  assert.equal(config.brandNames.rt, 'RT Basics');
+  for (const key of Object.keys(config.keywords)) assert.equal(messageFor(key, 'rt'), null, key);
+});
+
 test('sends one DM per keyword comment, skips its own, sentences, old Reels; second run sends nothing', () => {
   const first = run();
   assert.equal(first.status, 0, first.out);

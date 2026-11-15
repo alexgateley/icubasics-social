@@ -1,14 +1,16 @@
 {
-  "_about": "Comment-to-get for the three Basics Instagram accounts. scripts/comment-replies.mjs DMs the page below when a comment is one of these keywords; scripts/add-keyword-cta.mjs adds the 'Comment X' line to queued captions. A brand without a page for a keyword gets no line and no DM. Paths are relative to each brand's site.",
+  "_about": "Comment-to-get for the Basics Instagram accounts. scripts/comment-replies.mjs DMs the page below when a comment is one of these keywords; scripts/add-keyword-cta.mjs adds the 'Comment X' line to queued captions. A brand without a page for a keyword gets no line and no DM. Paths are relative to each brand's site. rt (@respiratorytherapybasics) has no pages yet: respiratorybasics.com did not resolve on 2026-11-15, so no rt DM goes out until pages are added once the site is live.",
   "sites": {
     "icu": "https://icubasics.com",
     "rn": "https://rnbasics.com",
-    "medic": "https://medicbasics.com"
+    "medic": "https://medicbasics.com",
+    "rt": "https://respiratorybasics.com"
   },
   "brandNames": {
     "icu": "ICU Basics",
     "rn": "RN Basics",
-    "medic": "Medic Basics"
+    "medic": "Medic Basics",
+    "rt": "RT Basics"
   },
   "keywords": {
     "POTASSIUM": {

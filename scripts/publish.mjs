@@ -14,7 +14,7 @@
 // Environment:
 //   IG_ACCESS_TOKEN   long-lived token from the Meta app dashboard (Instagram API with Instagram Login)
 //   IG_USER_ID        the Instagram professional account id shown next to the token
-//   BRAND             icu (default, posts/ and published/) or rn (posts-rn/ and published-rn/)
+//   BRAND             icu (default, posts/ and published/), or rn, medic, rt (posts-<brand>/ and published-<brand>/)
 //   PAGES_BASE_URL    where posts/ is served, e.g. https://alexgateley.github.io/icubasics-social
 //   POST_DATE         optional YYYY-MM-DD to post a specific day and skip the time-of-day check
 //   DRY_RUN           "true" to log what would be posted without calling the API
@@ -46,6 +46,9 @@ const AFTERNOON_HOUR = 15;
 const featuresDir = `features/${brand}`;
 
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
+// The Instagram accounts this job posts for (rt is @respiratorytherapybasics, added 2026-11-15)
+const BRANDS = ['icu', 'rn', 'medic', 'rt'];
+if (!BRANDS.includes(brand)) fail(`Unknown BRAND '${brand}' (one of ${BRANDS.join(', ')})`);
 // Instagram allows at most 5 hashtags per post (since Dec 2025); keep the first 5 if a caption has more
 const readCaption = (file) => {
   const lines = fs.readFileSync(file, 'utf8').trim().split('\n');
@@ -106,7 +109,8 @@ async function publishToday() {
     console.log(`It is ${now.hour}:00 in ${TZ}; posting happens from ${POST_HOUR}:00. Nothing to do.`);
     return;
   }
-  const index = JSON.parse(fs.readFileSync(path.join(postsDir, 'index.json'), 'utf8'));
+  const indexPath = path.join(postsDir, 'index.json');
+  const index = fs.existsSync(indexPath) ? JSON.parse(fs.readFileSync(indexPath, 'utf8')) : {};
   const folder = index[date];
   if (!folder) {
     console.log(`No ${brand} post prepared for ${date}. Run push-month.sh in the app repo to add more days.`);

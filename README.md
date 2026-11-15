@@ -45,6 +45,11 @@ Generate RN Basics posts with `BRAND=rn scripts/social/push-month.sh <start> <da
    tokens" (it must be a professional account), then `sh scripts/setup-secrets.sh rn`, which stores
    `IG_USER_ID_RN` and `IG_ACCESS_TOKEN_RN`. Until those exist the RN job skips with a notice.
    Test with `gh workflow run "Post Question of the Day" -f brand=rn -f dry_run=true`.
+6. **RT Basics** (@respiratorytherapybasics, brand `rt`, added 2026-11-15): the same with
+   `sh scripts/setup-secrets.sh rt` (`IG_USER_ID_RT`, `IG_ACCESS_TOKEN_RT`). Its schedules
+   (`shorts*/rt/`, `features/rt/`) start empty and it has no `posts-rt/`, so nothing posts until videos
+   are added (`add-short.mjs` reads an `RT BASICS` captions section and `short - RT Basics.mp4`). Its
+   comment-to-get pages stay empty until respiratorybasics.com is live.
 
 ## Every month
 
@@ -163,7 +168,7 @@ Instagram insights are private and this repository is public, so analytics never
 nothing is committed here. `scripts/analytics.mjs` runs nightly on Alex's Mac
 (`launchd/com.icubasics.analytics.plist`, 2:05 AM Pacific) with credentials from the login keychain
 (`scripts/setup-keychain.sh <account>` or `all` for Instagram, `scripts/setup-youtube.sh` for YouTube). It reads
-per-Reel insights for every Instagram account with a keychain token (icu, rn, medic, rhea, winery,
+per-Reel insights for every Instagram account with a keychain token (icu, rn, medic, rt, rhea, winery,
 franchifi, gripwheels; the others are skipped with a note) (views, reach, saved, shares, likes, comments,
 total_interactions, ig_reels_avg_watch_time, ig_reels_video_view_total_time), follower counts, and
 per-video YouTube Analytics (views, estimatedMinutesWatched, averageViewDuration, likes,
