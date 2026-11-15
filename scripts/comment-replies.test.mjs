@@ -45,6 +45,18 @@ test('message names the brand and the full link; no page means no message', () =
   assert.equal(messageFor('STEMI', 'rn'), null);
 });
 
+test('APP / LINK / FREE send the site home (the store buttons) with a natural line; topic keywords still win', () => {
+  assert.equal(matchKeyword('APP'), 'APP');
+  assert.equal(matchKeyword('link please'), 'APP');
+  assert.equal(matchKeyword('free'), 'APP');
+  assert.equal(matchKeyword('sepsis link'), 'SEPSIS');
+  assert.equal(messageFor('APP', 'rn'), "Here's your free app link for RN Basics 👇\nhttps://rnbasics.com/");
+  assert.equal(messageFor('APP', 'icu'), "Here's your free app link for ICU Basics 👇\nhttps://icubasics.com/");
+  assert.match(messageFor('APP', 'medic'), /^Here's your free app link for Medic Basics 👇\nhttps:\/\/medicbasics\.com\/$/);
+  assert.doesNotMatch(messageFor('APP', 'rn'), /free free/);
+  assert.match(messageFor('SEPSIS', 'rn'), /^Here's your free sepsis/);
+});
+
 test('rt has a site and a name but no pages yet, so it gets no DM', () => {
   assert.equal(config.sites.rt, 'https://respiratorybasics.com');
   assert.equal(config.brandNames.rt, 'RT Basics');

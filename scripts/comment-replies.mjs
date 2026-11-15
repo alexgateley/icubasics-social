@@ -82,7 +82,11 @@ export function messageFor(key, brand, config = CONFIG) {
   const def = config.keywords[key];
   if (!def?.[brand]) return null;
   const url = config.sites[brand] + def[brand];
-  return `Here's your free ${def.label} from ${config.brandNames[brand]} 👇\n${url}\n\nEducation only; follow your institution's protocols.`;
+  // The site home ("/": the free app's store buttons) is not clinical content, so no protocols note; a label that
+  // already says "free" ("free app link") is not doubled
+  const what = /^free\b/i.test(def.label) ? def.label : `free ${def.label}`;
+  if (def[brand] === '/') return `Here's your ${what} for ${config.brandNames[brand]} 👇\n${url}`;
+  return `Here's your ${what} from ${config.brandNames[brand]} 👇\n${url}\n\nEducation only; follow your institution's protocols.`;
 }
 
 // ---------- state ----------

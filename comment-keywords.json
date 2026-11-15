@@ -324,6 +324,16 @@
       "icu": "/drugs/albuterol.html",
       "rn": "/drugs/albuterol.html",
       "medic": "/drugs/albuterol.html"
+    },
+    "APP": {
+      "label": "free app link",
+      "aliases": [
+        "LINK",
+        "FREE"
+      ],
+      "icu": "/",
+      "rn": "/",
+      "medic": "/"
     }
   },
   "slugs": {
