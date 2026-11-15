@@ -4,7 +4,7 @@
     "icu": "https://icubasics.com",
     "rn": "https://rnbasics.com",
     "medic": "https://medicbasics.com",
-    "rt": "https://respiratorybasics.com"
+    "rt": "https://icubasics.com"
   },
   "brandNames": {
     "icu": "ICU Basics",
@@ -333,7 +333,8 @@
       ],
       "icu": "/",
       "rn": "/",
-      "medic": "/"
+      "medic": "/",
+      "rt": "/"
     }
   },
   "slugs": {
@@ -420,5 +421,6 @@
     "sb-preload-60-seconds": "PRELOAD",
     "sb-preload-nitro-hydralazine": "PRELOAD",
     "sb-preload-weak-heart": "PRELOAD"
-  }
+  },
+  "_rtNote": "rt points to icubasics.com until respiratorybasics.com and the RT app are live (Alex 2026-11-15)"
 }
