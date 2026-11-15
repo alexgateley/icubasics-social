@@ -23,8 +23,10 @@
 //   count existing users as first seen. quiz_started, days_since_install and the site snippet are in the code
 //   (2026-11-03) but not yet in any release or on the live sites: their columns stay 0 until they ship.
 //   Sites: $pageview and site_outbound_click (kind app_store, play, app) with $lib basics-site, brand and site
-//   (icubasics.com, rnbasics.com, medicbasics.com). The page's address is sent without its query, so there are
-//   no UTM tags; the source is $referring_domain ($direct when there is none). The id is random per page view,
+//   (icubasics.com, rnbasics.com, medicbasics.com). The page's address is sent without its query; the source is
+//   the utm_source event property when a page view has one (bio and story links carry ?utm_source=instagram...;
+//   the site snippet must send it as a property, which it does not yet as of 2026-11-15), else $referring_domain
+//   ($direct when there is none). The id is random per page view,
 //   so a "visit" here is a page view that came from outside the site (a landing), not a unique visitor.
 //
 // Store (ANALYTICS_DIR, default ~/basics-growth-work/analytics/):
@@ -59,7 +61,9 @@ const secondsNow = () => { const [h, m, sec] = new Intl.DateTimeFormat('en-GB', 
 const DAY = `toDate(toTimeZone(timestamp, '${TZ}'))`;
 const APP = `properties.brand IN ('icu', 'rn', 'medic') AND properties.platform IN ('ios', 'android', 'web') AND event NOT LIKE '$%'`;
 // Referrer → source. Android apps arrive as android-app://<package> (TikTok's is com.zhiliaoapp.musically).
-const SOURCE = `multiIf(
+// A tagged link's utm_source ("instagram", "tiktok", "youtube") wins over the referrer, which in-app browsers often leave out.
+export const SITE_SOURCE_INPUT = `lower(coalesce(nullIf(properties.utm_source, ''), properties.$referring_domain, ''))`;
+export const SOURCE = `multiIf(
   r = '' OR r = '$direct', 'direct',
   r = site OR r = concat('www.', site), 'internal',
   r LIKE '%instagram%', 'instagram',
@@ -68,7 +72,7 @@ const SOURCE = `multiIf(
   r LIKE '%google%' OR r LIKE '%bing.%' OR r LIKE '%duckduckgo%' OR r LIKE '%yahoo%' OR r LIKE '%ecosia%' OR r LIKE '%search.brave%' OR r LIKE '%yandex%' OR r LIKE '%baidu%', 'search',
   'other')`;
 
-const queries = (days) => {
+export const queries = (days) => {
   const from = addDays(today, -days + 1);
   const since = `timestamp >= toDateTime('${addDays(from, -1)} 00:00:00')`;
   return {
@@ -106,7 +110,7 @@ const queries = (days) => {
       GROUP BY day, brand, platform HAVING day >= toDate('${from}') AND brand != '' ORDER BY day LIMIT 50000`,
     sites: `SELECT day, site, brand, event, kind, source, count() AS n FROM (
         SELECT ${DAY} AS day, properties.site AS site, properties.brand AS brand, event, coalesce(properties.kind, '') AS kind,
-          lower(coalesce(properties.$referring_domain, '')) AS r, ${SOURCE} AS source
+          ${SITE_SOURCE_INPUT} AS r, ${SOURCE} AS source
         FROM events WHERE ${since} AND properties.$lib = 'basics-site' AND event IN ('$pageview', 'site_outbound_click'))
       WHERE day >= toDate('${from}') GROUP BY day, site, brand, event, kind, source ORDER BY day LIMIT 50000`,
     // Today, yesterday and the day before, each counted only up to the current time of day (Chicago), so today so far
