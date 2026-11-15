@@ -57,10 +57,14 @@ test('APP / LINK / FREE send the site home (the store buttons) with a natural li
   assert.match(messageFor('SEPSIS', 'rn'), /^Here's your free sepsis/);
 });
 
-test('rt has a site and a name but no pages yet, so it gets no DM', () => {
-  assert.equal(config.sites.rt, 'https://respiratorybasics.com');
+test('rt points to ICU Basics until its app is live: only APP gets a DM, with the ICU Basics link', () => {
+  assert.equal(config.sites.rt, 'https://icubasics.com');
   assert.equal(config.brandNames.rt, 'RT Basics');
-  for (const key of Object.keys(config.keywords)) assert.equal(messageFor(key, 'rt'), null, key);
+  for (const key of Object.keys(config.keywords)) {
+    const m = messageFor(key, 'rt');
+    if (key === 'APP') assert.ok(m && m.includes('https://icubasics.com/'), m);
+    else assert.equal(m, null, key);
+  }
 });
 
 test('sends one DM per keyword comment, skips its own, sentences, old Reels; second run sends nothing', () => {
