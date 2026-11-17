@@ -35,7 +35,7 @@ function seed() {
     'reel-30': { platform: 'instagram', account: 'icu', title: 'Old reel', topic: 'Kept reel topic', slot: 'noon', posted: '2026-01-01T00:00:00Z' },
   }));
   const igTokens = {};
-  for (const a of ['icu', 'rn', 'medic', 'rt', 'rhea', 'winery', 'franchifi', 'gripwheels']) igTokens[a] = { refreshedAt: recent, expiresAt: recent };
+  for (const a of ['icu', 'rn', 'medic', 'rt', 'er', 'rhea', 'winery', 'franchifi', 'gripwheels']) igTokens[a] = { refreshedAt: recent, expiresAt: recent };
   fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify({ igTokens, somethingElse: 'kept' }));
   return dir;
 }
@@ -99,7 +99,7 @@ test('INSIGHTS_DAYS=7: paging stops at the cutoff, and older Reels keep their li
   const dir = seed();
   const r = run(dir, ['fetch', '--only', 'instagram'], { INSIGHTS_DAYS: '7' });
   assert.equal(r.status, 0, r.out);
-  const perAccount = instagram(r.calls).filter((c) => c.endsWith('/media')).length / 8;
+  const perAccount = instagram(r.calls).filter((c) => c.endsWith('/media')).length / 9;
   assert.equal(perAccount, 1, 'one media page per account');
   const rows = readLines(dir, 'media.jsonl');
   assert.deepEqual(rows.filter((x) => x.id === 'reel-30' && x.account === 'icu').map((x) => x.views), [3000]);

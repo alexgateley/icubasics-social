@@ -1,4 +1,4 @@
-// Schedules an explainer short on the Basics Instagram accounts (icu, rn, medic, rt). Copies each brand's video from a
+// Schedules an explainer short on the Basics Instagram accounts (icu, rn, medic, rt, er). Copies each brand's video from a
 // topic folder in ~/Desktop/Social Media Uploads/ (short - <Brand> Basics.mp4), takes that brand's
 // "INSTAGRAM REELS" caption from "short - captions and tags.txt", converts short - cover.png to a
 // JPEG cover, and adds the date to shorts/<brand>/schedule.json. A brand without a video (for
@@ -25,12 +25,12 @@ const src = path.isAbsolute(folderArg) ? folderArg : path.join(process.env.HOME,
 const slug = slugArg || path.basename(src).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const text = fs.readFileSync(path.join(src, 'short - captions and tags.txt'), 'utf8');
 
-const BRANDS = { rn: 'RN', icu: 'ICU', medic: 'MEDIC', rt: 'RT' };
-const NAMES = { rn: 'RN Basics', icu: 'ICU Basics', medic: 'Medic Basics', rt: 'RT Basics' };
+const BRANDS = { rn: 'RN', icu: 'ICU', medic: 'MEDIC', rt: 'RT', er: 'ER' };
+const NAMES = { rn: 'RN Basics', icu: 'ICU Basics', medic: 'Medic Basics', rt: 'RT Basics', er: 'ER Basics' };
 
 /** The Instagram caption inside one brand's section of the captions file. */
 function caption(brand) {
-  const sections = text.split(/^═+ (RN|ICU|MEDIC|RT) BASICS ═+$/m);
+  const sections = text.split(/^═+ (RN|ICU|MEDIC|RT|ER) BASICS ═+$/m);
   const i = sections.indexOf(BRANDS[brand]);
   if (i < 0) return null;
   const lines = sections[i + 1].split('\n');

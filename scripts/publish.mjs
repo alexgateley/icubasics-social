@@ -14,7 +14,7 @@
 // Environment:
 //   IG_ACCESS_TOKEN   long-lived token from the Meta app dashboard (Instagram API with Instagram Login)
 //   IG_USER_ID        the Instagram professional account id shown next to the token
-//   BRAND             icu (default, posts/ and published/), or rn, medic, rt (posts-<brand>/ and published-<brand>/)
+//   BRAND             icu (default, posts/ and published/), or rn, medic, rt, er (posts-<brand>/ and published-<brand>/)
 //   PAGES_BASE_URL    where posts/ is served, e.g. https://alexgateley.github.io/icubasics-social
 //   POST_DATE         optional YYYY-MM-DD to post a specific day and skip the time-of-day check
 //   DRY_RUN           "true" to log what would be posted without calling the API
@@ -46,8 +46,8 @@ const AFTERNOON_HOUR = 15;
 const featuresDir = `features/${brand}`;
 
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
-// The Instagram accounts this job posts for (rt is @respiratorytherapybasics, added 2026-11-15)
-const BRANDS = ['icu', 'rn', 'medic', 'rt'];
+// The Instagram accounts this job posts for (rt is @respiratorytherapybasics, added 2026-11-15; er is @emergencyroombasics, added 2026-11-17)
+const BRANDS = ['icu', 'rn', 'medic', 'rt', 'er'];
 if (!BRANDS.includes(brand)) fail(`Unknown BRAND '${brand}' (one of ${BRANDS.join(', ')})`);
 // Instagram allows at most 5 hashtags per post (since Dec 2025); keep the first 5 if a caption has more
 const readCaption = (file) => {
