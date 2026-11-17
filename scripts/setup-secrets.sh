@@ -18,7 +18,7 @@ case "$BRAND" in
   icu) SUFFIX=""; DEFAULT_ID=""; HANDLE="@icubasics" ;;
   rn)  SUFFIX="_RN"; DEFAULT_ID="17841429422921068"; HANDLE="@rnbasicsnclex" ;;
   medic) SUFFIX="_MEDIC"; DEFAULT_ID=""; HANDLE="@themedicbasics" ;;
-  rt) SUFFIX="_RT"; DEFAULT_ID=""; HANDLE="@respiratorytherapybasics" ;;
+  rt) SUFFIX="_RT"; DEFAULT_ID="17841480403371899"; HANDLE="@respiratorytherapybasics" ;;
   er) SUFFIX="_ER"; DEFAULT_ID="17841432666485681"; HANDLE="@emergencyroombasics" ;;
   *) echo "Unknown brand '$BRAND' (icu, rn, medic, rt or er)"; exit 1 ;;
 esac

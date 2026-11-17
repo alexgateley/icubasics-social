@@ -75,7 +75,7 @@ const IG_ACCOUNTS = [
   { account: 'rn', label: '@rnbasicsnclex', suffix: '_RN', userId: '17841429422921068' },
   { account: 'medic', label: '@themedicbasics', suffix: '_MEDIC', userId: '17841420840594491' },
   // No ID on file yet: setup-keychain.sh rt stores the one from the Meta dashboard
-  { account: 'rt', label: '@respiratorytherapybasics', suffix: '_RT', userId: '' },
+  { account: 'rt', label: '@respiratorytherapybasics', suffix: '_RT', userId: '17841480403371899' },
   { account: 'er', label: '@emergencyroombasics', suffix: '_ER', userId: '17841432666485681' },
   { account: 'rhea', label: '@runonrhea', suffix: '_RHEA', userId: '17841426819974871' },
   { account: 'winery', label: '@thewinerybooks', suffix: '_WINERY', userId: '17841433053134440' },

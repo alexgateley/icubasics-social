@@ -42,7 +42,7 @@ const ACCOUNTS = [
   { account: 'rn', suffix: '_RN', userId: '17841429422921068', handle: 'rnbasicsnclex' },
   { account: 'medic', suffix: '_MEDIC', userId: '17841420840594491', handle: 'themedicbasics' },
   // No ID on file yet: read from the keychain (setup-keychain.sh rt)
-  { account: 'rt', suffix: '_RT', userId: '', handle: 'respiratorytherapybasics' },
+  { account: 'rt', suffix: '_RT', userId: '17841480403371899', handle: 'respiratorytherapybasics' },
   { account: 'er', suffix: '_ER', userId: '17841432666485681', handle: 'emergencyroombasics' },
 ].filter((a) => !process.env.ACCOUNTS || process.env.ACCOUNTS.split(',').includes(a.account));
 

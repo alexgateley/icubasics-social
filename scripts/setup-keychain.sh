@@ -33,7 +33,7 @@ info() {
     icu)        SUFFIX="";            DEFAULT_ID="17841423460793482"; HANDLE="@icubasics" ;;
     rn)         SUFFIX="_RN";         DEFAULT_ID="17841429422921068"; HANDLE="@rnbasicsnclex" ;;
     medic)      SUFFIX="_MEDIC";      DEFAULT_ID="17841420840594491"; HANDLE="@themedicbasics" ;;
-    rt)         SUFFIX="_RT";         DEFAULT_ID="";                  HANDLE="@respiratorytherapybasics" ;;
+    rt)         SUFFIX="_RT";         DEFAULT_ID="17841480403371899"; HANDLE="@respiratorytherapybasics" ;;
     er)         SUFFIX="_ER";         DEFAULT_ID="17841432666485681"; HANDLE="@emergencyroombasics" ;;
     rhea)       SUFFIX="_RHEA";       DEFAULT_ID="17841426819974871"; HANDLE="@runonrhea" ;;
     winery)     SUFFIX="_WINERY";     DEFAULT_ID="17841433053134440"; HANDLE="@thewinerybooks" ;;
