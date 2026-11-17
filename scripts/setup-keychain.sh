@@ -8,7 +8,7 @@
 #   sh scripts/setup-keychain.sh rn         # @rnbasicsnclex    (IG_USER_ID_RN, IG_ACCESS_TOKEN_RN)
 #   sh scripts/setup-keychain.sh medic      # @themedicbasics   (IG_USER_ID_MEDIC, IG_ACCESS_TOKEN_MEDIC)
 #   sh scripts/setup-keychain.sh rt         # @respiratorytherapybasics (IG_USER_ID_RT, IG_ACCESS_TOKEN_RT)
-#   sh scripts/setup-keychain.sh er         # @emergencyroombasics (IG_USER_ID_ER, IG_ACCESS_TOKEN_ER)
+#   sh scripts/setup-keychain.sh er         # @theerbasics (IG_USER_ID_ER, IG_ACCESS_TOKEN_ER)
 #   sh scripts/setup-keychain.sh rhea       # @runonrhea        (IG_USER_ID_RHEA, IG_ACCESS_TOKEN_RHEA)
 #   sh scripts/setup-keychain.sh winery     # @thewinerybooks   (IG_USER_ID_WINERY, IG_ACCESS_TOKEN_WINERY)
 #   sh scripts/setup-keychain.sh franchifi  # @franchifi        (IG_USER_ID_FRANCHIFI, IG_ACCESS_TOKEN_FRANCHIFI)
@@ -34,7 +34,7 @@ info() {
     rn)         SUFFIX="_RN";         DEFAULT_ID="17841429422921068"; HANDLE="@rnbasicsnclex" ;;
     medic)      SUFFIX="_MEDIC";      DEFAULT_ID="17841420840594491"; HANDLE="@themedicbasics" ;;
     rt)         SUFFIX="_RT";         DEFAULT_ID="17841480403371899"; HANDLE="@respiratorytherapybasics" ;;
-    er)         SUFFIX="_ER";         DEFAULT_ID="17841432666485681"; HANDLE="@emergencyroombasics" ;;
+    er)         SUFFIX="_ER";         DEFAULT_ID=""; HANDLE="@theerbasics" ;;
     rhea)       SUFFIX="_RHEA";       DEFAULT_ID="17841426819974871"; HANDLE="@runonrhea" ;;
     winery)     SUFFIX="_WINERY";     DEFAULT_ID="17841433053134440"; HANDLE="@thewinerybooks" ;;
     franchifi)  SUFFIX="_FRANCHIFI";  DEFAULT_ID="17841451921105656"; HANDLE="@franchifi" ;;

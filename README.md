@@ -50,9 +50,9 @@ Generate RN Basics posts with `BRAND=rn scripts/social/push-month.sh <start> <da
    (`shorts*/rt/`, `features/rt/`) start empty and it has no `posts-rt/`, so nothing posts until videos
    are added (`add-short.mjs` reads an `RT BASICS` captions section and `short - RT Basics.mp4`). Its
    comment-to-get pages stay empty until respiratorybasics.com is live.
-7. **ER Basics** (@emergencyroombasics, brand `er`, added 2026-11-17): the same with
-   `sh scripts/setup-secrets.sh er` (`IG_USER_ID_ER`, `IG_ACCESS_TOKEN_ER`; the user ID 17841432666485681 is
-   prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads an
+7. **ER Basics** (@theerbasics, brand `er`, added 2026-11-17): the same with
+   `sh scripts/setup-secrets.sh er` (`IG_USER_ID_ER`, `IG_ACCESS_TOKEN_ER`; the user ID is shown next to
+   the token in the Meta dashboard). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads an
    `ER BASICS` captions section and `short - ER Basics.mp4`).
 
 ## Every month

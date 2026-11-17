@@ -1,4 +1,4 @@
-// Comment-to-get for @icubasics, @rnbasicsnclex, @themedicbasics, @respiratorytherapybasics and @emergencyroombasics. When someone comments a keyword from
+// Comment-to-get for @icubasics, @rnbasicsnclex, @themedicbasics, @respiratorytherapybasics and @theerbasics. When someone comments a keyword from
 // comment-keywords.json on a recent Reel ("SEPSIS"), this sends them one private reply (an Instagram DM tied to
 // that comment) with the matching free page on the brand's site, and answers the comment publicly ("Sent you a
 // DM 📩"). Runs ONLY on Alex's Mac (launchd/com.icubasics.comments.plist, every 10 minutes): tokens come from the
@@ -43,7 +43,7 @@ const ACCOUNTS = [
   { account: 'medic', suffix: '_MEDIC', userId: '17841420840594491', handle: 'themedicbasics' },
   // No ID on file yet: read from the keychain (setup-keychain.sh rt)
   { account: 'rt', suffix: '_RT', userId: '17841480403371899', handle: 'respiratorytherapybasics' },
-  { account: 'er', suffix: '_ER', userId: '17841432666485681', handle: 'emergencyroombasics' },
+  { account: 'er', suffix: '_ER', userId: '', handle: 'theerbasics' },
 ].filter((a) => !process.env.ACCOUNTS || process.env.ACCOUNTS.split(',').includes(a.account));
 
 const log = (msg) => console.log(`${new Date().toISOString()} ${msg}`);

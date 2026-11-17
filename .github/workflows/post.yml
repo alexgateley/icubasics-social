@@ -61,7 +61,7 @@ jobs:
       # Each account has its own token and user id: IG_ACCESS_TOKEN / IG_USER_ID for @icubasics,
       # IG_ACCESS_TOKEN_RN / IG_USER_ID_RN for @rnbasicsnclex, IG_ACCESS_TOKEN_MEDIC / IG_USER_ID_MEDIC
       # for @themedicbasics, IG_ACCESS_TOKEN_RT / IG_USER_ID_RT for @respiratorytherapybasics, IG_ACCESS_TOKEN_ER / IG_USER_ID_ER
-      # for @emergencyroombasics. A brand
+      # for @theerbasics. A brand
       # whose secrets are not set yet is skipped with a notice instead of failing the run.
       - name: Select the account's credentials
         id: creds

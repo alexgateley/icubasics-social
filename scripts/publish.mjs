@@ -46,7 +46,7 @@ const AFTERNOON_HOUR = 15;
 const featuresDir = `features/${brand}`;
 
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
-// The Instagram accounts this job posts for (rt is @respiratorytherapybasics, added 2026-11-15; er is @emergencyroombasics, added 2026-11-17)
+// The Instagram accounts this job posts for (rt is @respiratorytherapybasics, added 2026-11-15; er is @theerbasics, added 2026-11-17)
 const BRANDS = ['icu', 'rn', 'medic', 'rt', 'er'];
 if (!BRANDS.includes(brand)) fail(`Unknown BRAND '${brand}' (one of ${BRANDS.join(', ')})`);
 // Instagram allows at most 5 hashtags per post (since Dec 2025); keep the first 5 if a caption has more
