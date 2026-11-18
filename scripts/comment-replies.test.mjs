@@ -103,3 +103,15 @@ test('a permission error stops the account, retries later, and gives up after th
   const c = run({ FAKE_FAIL_MESSAGES: '10', DIR: a.dir });
   assert.match(c.state.replied.c1.status, /^failed/);
 });
+
+test('a system-user account (EAA...) reads through graph.facebook.com and sends nothing', () => {
+  const r = run({ ACCOUNTS: 'er' });
+  assert.equal(r.status, 0, r.out);
+  assert.deepEqual(r.calls.filter((c) => !c.startsWith('exec')), ['GET /v25.0/17841479868648523/media [graph.facebook.com]']);
+  assert.match(r.out, /system-user token/);
+  assert.ok(!r.out.includes('EAAfake'), 'the token is never printed');
+  const check = run({ ACCOUNTS: 'er' }, ['--check']);
+  assert.equal(check.status, 0, check.out);
+  assert.ok(check.calls.includes('GET /v25.0/er-reel/comments [graph.facebook.com]'), check.calls.join('\n'));
+  assert.equal(check.calls.filter((c) => c.startsWith('POST')).length, 0);
+});

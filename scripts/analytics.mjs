@@ -1,4 +1,4 @@
-// Nightly analytics for Alex's seven Instagram accounts (the three Basics ones, @runonrhea, @thewinerybooks,
+// Nightly analytics for Alex's Instagram accounts (the nine Basics ones, @runonrhea, @thewinerybooks,
 // @franchifi, @griptheorywheels) and the YouTube channels in youtube-channels.mjs (@TheRNBasics as account
 // "yt", @Rheafi as "yt-rheafi"). Runs ONLY on
 // Alex's Mac (launchd/com.icubasics.analytics.plist, 2 AM Pacific): insights are private and this
@@ -20,7 +20,8 @@
 //   media.jsonl      one line per Reel or video per night with its lifetime totals
 //   media-meta.json  per Reel or video: account, posted time, title, permalink, topic, slot
 //   state.json       no secrets: per Instagram account the keychain token's last refresh and expiry
-//                    (igTokens.<account>.refreshedAt / expiresAt; igRefreshedAt is the older copy of refreshedAt)
+//                    (igTokens.<account>.refreshedAt / expiresAt; igRefreshedAt is the older copy of refreshedAt;
+//                    a system-user token is recorded as { kind: 'system-user', neverExpires: true } instead)
 //                    and how the last fetch went (igAccounts.<account>.status: ok, missing (no token), error)
 //   dashboard.html   static page built from the above
 //   posthog.jsonl, posthog-state.json   app and website usage, written by scripts/posthog.mjs. This job does not
@@ -32,6 +33,9 @@
 //   total_interactions, ig_reels_avg_watch_time, ig_reels_video_view_total_time (both in milliseconds).
 //   plays, clips_replays_count, ig_reels_aggregated_all_plays_count and impressions were removed
 //   April 21, 2025, video_views January 8, 2025. Insights can lag up to 48 hours and are kept 2 years.
+//   The same metric names, media fields (id, caption, media_type, media_product_type, timestamp, permalink), user
+//   fields (id, username, followers_count, media_count) and follower_count user insight work on graph.facebook.com
+//   with Facebook Login (instagram_basic, instagram_manage_insights, pages_read_engagement), checked 2026-11-18.
 //   YouTube Analytics v2 reports, dimension video (needs maxResults â‰¤ 200 and a sort): views,
 //   estimatedMinutesWatched, averageViewDuration (seconds), likes, subscribersGained. These lag 2-3 days.
 //   Follower history (2026-11-04): Instagram user insights follower_count (period=day, new followers per day,
@@ -47,7 +51,14 @@ import { readSecret, writeSecret } from './keychain.mjs';
 import { CHANNELS } from './youtube-channels.mjs';
 
 const TZ = 'America/Chicago';
-const GRAPH = 'https://graph.instagram.com/v25.0';
+// Two kinds of token, as in publish.mjs: Instagram-login tokens (IGAA..., icu, rn, medic, rhea, winery, franchifi,
+// gripwheels) use graph.instagram.com and are refreshed here before their 60 days run out; Unified-login system-user
+// tokens (EAA..., the Basics Posting app from 2026-11-18: rt, er, ekg, np, pharm, lab) work only on
+// graph.facebook.com and never expire, so they are never refreshed.
+const IG_GRAPH = 'https://graph.instagram.com/v25.0';
+const FB_GRAPH = 'https://graph.facebook.com/v25.0';
+const isSystemUser = (token) => String(token || '').startsWith('EAA');
+const graphFor = (token) => (isSystemUser(token) ? FB_GRAPH : IG_GRAPH);
 const REPO_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIR = process.env.ANALYTICS_DIR || path.join(os.homedir(), 'basics-growth-work/analytics');
 const fixtures = process.env.FIXTURES === '1';
@@ -74,7 +85,7 @@ const IG_ACCOUNTS = [
   { account: 'icu', label: '@icubasics', suffix: '', userId: '17841423460793482' },
   { account: 'rn', label: '@rnbasicsnclex', suffix: '_RN', userId: '17841429422921068' },
   { account: 'medic', label: '@themedicbasics', suffix: '_MEDIC', userId: '17841420840594491' },
-  // No ID on file yet: setup-keychain.sh rt stores the one from the Meta dashboard
+  // rt, er, ekg, np, pharm, lab: system-user tokens (EAA...) from the Basics Posting app, read through graph.facebook.com
   { account: 'rt', label: '@respiratorytherapybasics', suffix: '_RT', userId: '17841480403371899' },
   { account: 'er', label: '@theerbasics', suffix: '_ER', userId: '17841479868648523' },
   { account: 'ekg', label: '@ekgtechbasics', suffix: '_EKG', userId: '17841458933751960' },
@@ -89,6 +100,9 @@ const IG_ACCOUNTS = [
 const IG_METRICS = ['views', 'reach', 'saved', 'shares', 'likes', 'comments', 'total_interactions', 'ig_reels_avg_watch_time', 'ig_reels_video_view_total_time'];
 const YT_METRICS = ['views', 'estimatedMinutesWatched', 'averageViewDuration', 'likes', 'subscribersGained'];
 const SLOTS = { reel: '7 AM', morning: '7 AM', short: 'noon', afternoon: '3 PM', feature: '6 PM', recap: 'recap' };
+// Evening Reel (publish.mjs eveningHour): 6 PM until 2026-11-17; from 2026-11-18 icu, rn and medic alternate 6 PM (even
+// dates) and 8 PM (odd dates), every other brand posts at 8 PM
+const eveningSlot = (brand, date) => (date < '2026-11-18' || (['icu', 'rn', 'medic'].includes(brand) && Number(date.slice(8, 10)) % 2 === 0) ? '6 PM' : '8 PM');
 
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
 const file = (name) => path.join(DIR, name);
@@ -102,17 +116,30 @@ const scrub = (s) => String(s).replace(/access_token=[^&\s"]+/g, 'access_token=â
 // ---------- Instagram ----------
 
 async function ig(token, endpoint, params = {}) {
+  const GRAPH = graphFor(token);
   const url = endpoint.startsWith('https://') ? new URL(endpoint) : new URL(`${GRAPH}/${endpoint}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set('access_token', token);
   const res = await fetch(url);
   const json = await res.json();
-  if (!res.ok || json.error) throw new Error(`${endpoint.split('?')[0].replace(GRAPH, '')}: ${json.error?.message ?? res.status}`);
+  if (!res.ok || json.error) {
+    const e = new Error(`${endpoint.split('?')[0].replace(GRAPH, '')}: ${json.error?.message ?? res.status}`);
+    e.code = json.error?.code;
+    throw e;
+  }
   return json;
 }
+// Missing permission (10, 200) or a bad token (190): asking metric by metric would only fail nine more times
+const PERMISSION_CODES = [10, 190, 200];
 
 /** Refreshes the keychain copy of a long-lived token once a week so it never reaches its 60 days. */
 async function maybeRefresh(acct, token, state) {
+  // A system-user token never expires and has no refresh call: record that, so the Basics Social app shows no expiry
+  if (isSystemUser(token)) {
+    (state.igTokens ??= {})[acct.account] = { kind: 'system-user', neverExpires: true, checkedAt: new Date().toISOString() };
+    if (state.igRefreshedAt) delete state.igRefreshedAt[acct.account];
+    return token;
+  }
   const last = state.igTokens?.[acct.account]?.refreshedAt ?? state.igRefreshedAt?.[acct.account];
   if (last && Date.now() - Date.parse(last) < REFRESH_DAYS * 86400000) return token;
   try {
@@ -135,7 +162,8 @@ async function reelInsights(token, id) {
   const read = (data) => Object.fromEntries((data ?? []).map((m) => [m.name, m.values?.[0]?.value ?? m.total_value?.value ?? null]));
   try {
     return { metrics: read((await ig(token, `${id}/insights`, { metric: IG_METRICS.join(',') })).data), errors: [] };
-  } catch {
+  } catch (e) {
+    if (PERMISSION_CODES.includes(e.code)) return { metrics: {}, errors: [scrub(e.message)] };
     const metrics = {};
     const errors = [];
     for (const m of IG_METRICS) {
@@ -166,7 +194,8 @@ async function fetchInstagram(acct, state) {
     return null;
   }
   token = await maybeRefresh(acct, token, state);
-  const profile = await ig(token, userId, { fields: 'username,followers_count,media_count' });
+  // Always the account's own ID, never `me` (a system-user token's `me` is the system user, not the Instagram account)
+  const profile = await ig(token, userId, { fields: 'id,username,followers_count,media_count' });
   const cutoff = Date.now() - INSIGHTS_DAYS * 86400000;
   const reels = [];
   let next = `${userId}/media`;
@@ -323,7 +352,7 @@ function markerIndex() {
     try {
       const m = JSON.parse(body);
       const brand = p.startsWith('published-rn') ? 'rn' : p.startsWith('published-medic') ? 'medic' : p.startsWith('published-rt') ? 'rt' : p.startsWith('published-er') ? 'er' : p.startsWith('published-ekg') ? 'ekg' : p.startsWith('published-np') ? 'np' : p.startsWith('published-pharm') ? 'pharm' : p.startsWith('published-lab') ? 'lab' : 'icu';
-      if (m.mediaId) index[m.mediaId] = { kind: m.kind, folder: m.folder, brand };
+      if (m.mediaId) index[m.mediaId] = { kind: m.kind, folder: m.folder, brand, date: m.date };
     } catch { /* not a marker */ }
   }
   // YouTube videos uploaded by youtube-schedule.mjs: the day folder's topic ("Heart Failure"); others fall back to the title
@@ -344,8 +373,9 @@ function label(metas, index) {
     if (mk?.kind === 'reel') m.topic = 'Question of the Day';
     else if (mk?.folder) m.topic = mk.folder;
     else m.topic = m.title || '(no caption)';
-    if (mk?.kind && SLOTS[mk.kind]) m.slot = SLOTS[mk.kind];
-    else { const h = chicagoHour(m.posted); m.slot = h < 10 ? '7 AM' : h < 14 ? 'noon' : h < 17 ? '3 PM' : '6 PM'; }
+    if (mk?.kind === 'feature') m.slot = eveningSlot(mk.brand, mk.date ?? (m.posted ? new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date(m.posted)) : today));
+    else if (mk?.kind && SLOTS[mk.kind]) m.slot = SLOTS[mk.kind];
+    else { const h = chicagoHour(m.posted); m.slot = h < 10 ? '7 AM' : h < 14 ? 'noon' : h < 17 ? '3 PM' : h < 20 ? '6 PM' : '8 PM'; }
   }
 }
 
@@ -456,8 +486,13 @@ function writeFixtures() {
   // Token state as analytics.mjs records it: a refresh four days ago for each made-up account
   const state = {};
   const at = Date.parse(`${today}T09:05:00Z`) - 4 * 86400000;
+  // The Basics Posting app's accounts have system-user tokens, recorded as never expiring
+  const systemUser = ['rt', 'er', 'ekg', 'np', 'pharm', 'lab'];
   for (const a of IG_ACCOUNTS) {
-    if (igFixture.includes(a)) {
+    if (igFixture.includes(a) && systemUser.includes(a.account)) {
+      (state.igTokens ??= {})[a.account] = { kind: 'system-user', neverExpires: true, checkedAt: new Date(at).toISOString() };
+      status(state, a, 'ok', `${topics.length} Reels (fixture)`);
+    } else if (igFixture.includes(a)) {
       (state.igRefreshedAt ??= {})[a.account] = new Date(at).toISOString();
       (state.igTokens ??= {})[a.account] = { refreshedAt: new Date(at).toISOString(), expiresAt: new Date(at + 60 * 86400000).toISOString() };
       status(state, a, 'ok', `${topics.length} Reels (fixture)`);

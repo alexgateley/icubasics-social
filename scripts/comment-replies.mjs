@@ -18,6 +18,12 @@
 //      sh scripts/setup-keychain.sh <account>.
 // Instagram allows one private reply per comment, within 7 days of the comment.
 //
+// Two kinds of token, as in publish.mjs and analytics.mjs: Instagram-login tokens (IGAA...: icu, rn, medic) use
+// graph.instagram.com; Unified-login system-user tokens (EAA..., the Basics Posting app: rt, er, ekg, np, pharm, lab)
+// work only on graph.facebook.com. With those, reading Reels and comments works the same, but a private reply goes
+// to the linked Facebook Page (POST /{page-id}/messages with a Page access token and pages_messaging), which is not
+// set up here yet, so for a system-user account this script reads (--check) and sends nothing.
+//
 // Calls: one media list per account per run, and a comment read only for Reels from the last 7 days whose
 // comment count changed since the last run. Every write is a reply to a keyword comment; at most MAX_SENDS a run.
 import fs from 'node:fs';
@@ -26,7 +32,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readSecret } from './keychain.mjs';
 
-const GRAPH = 'https://graph.instagram.com/v25.0';
+const IG_GRAPH = 'https://graph.instagram.com/v25.0';
+const FB_GRAPH = 'https://graph.facebook.com/v25.0';
+const isSystemUser = (token) => String(token || '').startsWith('EAA');
+const graphFor = (token) => (isSystemUser(token) ? FB_GRAPH : IG_GRAPH);
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const CONFIG = JSON.parse(fs.readFileSync(process.env.KEYWORDS_FILE || path.join(REPO, 'comment-keywords.json'), 'utf8'));
 const STATE_FILE = process.env.COMMENTS_STATE || path.join(os.homedir(), 'basics-growth-work/analytics/comment-replies.json');
@@ -41,7 +50,7 @@ const ACCOUNTS = [
   { account: 'icu', suffix: '', userId: '17841423460793482', handle: 'icubasics' },
   { account: 'rn', suffix: '_RN', userId: '17841429422921068', handle: 'rnbasicsnclex' },
   { account: 'medic', suffix: '_MEDIC', userId: '17841420840594491', handle: 'themedicbasics' },
-  // No ID on file yet: read from the keychain (setup-keychain.sh rt)
+  // rt, er, ekg, np, pharm, lab: system-user tokens (graph.facebook.com); no DMs until a Page token is set up (see the top)
   { account: 'rt', suffix: '_RT', userId: '17841480403371899', handle: 'respiratorytherapybasics' },
   { account: 'er', suffix: '_ER', userId: '17841479868648523', handle: 'theerbasics' },
   { account: 'ekg', suffix: '_EKG', userId: '17841458933751960', handle: 'ekgtechbasics' },
@@ -54,6 +63,7 @@ const log = (msg) => console.log(`${new Date().toISOString()} ${msg}`);
 const scrub = (s) => String(s).replace(/access_token=[^&\s"]+/g, 'access_token=…').replace(/\b(IG|EA)[A-Za-z0-9_-]{40,}/g, '…');
 
 async function ig(token, endpoint, params = {}, body = null) {
+  const GRAPH = graphFor(token);
   const url = endpoint.startsWith('https://') ? new URL(endpoint) : new URL(`${GRAPH}/${endpoint}`);
   for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
   url.searchParams.set('access_token', token);
@@ -134,6 +144,10 @@ async function runAccount(acct, state, budget) {
     const withComments = reels.find((m) => m.comments_count > 0);
     if (withComments) await comments(token, withComments.id);
     log(`@${acct.handle}: OK, ${reels.length} posts in the last ${WINDOW_DAYS} days${withComments ? ', comments readable' : ', none with comments to test'}. Sending is tested only by a real keyword comment.`);
+    return 0;
+  }
+  if (isSystemUser(token)) {
+    log(`@${acct.handle}: system-user token; private replies through Facebook Login need the linked Page and a Page token, not set up yet, so nothing is read or sent`);
     return 0;
   }
   let sent = 0;

@@ -13,6 +13,7 @@
     --grid: #e1e0d9; --axis: #c3c2b7; --ring: rgba(11,11,11,0.10); --up: #006300; --hover: rgba(11,11,11,0.04);
     --icu: #2a78d6; --rn: #eb6834; --medic: #1baf7a; --yt: #eda100;
     --rhea: #4a7f3c; --winery: #8e2b56; --franchifi: #6a4fd0; --gripwheels: #5b6470; --yt-rheafi: #b0542a;
+    --rt: #138f8f; --er: #c22a4a; --ekg: #a3368a; --np: #6f8c01; --pharm: #2c3e8c; --lab: #5a7db8;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
@@ -21,6 +22,7 @@
       --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --up: #0ca30c; --hover: rgba(255,255,255,0.05);
       --icu: #3987e5; --rn: #d95926; --medic: #199e70; --yt: #c98500;
       --rhea: #6fa35f; --winery: #c4507f; --franchifi: #8f78e6; --gripwheels: #8d96a2; --yt-rheafi: #d9774a;
+      --rt: #2fb5b5; --er: #e05a75; --ekg: #d264b8; --np: #a2c22a; --pharm: #7b8fe0; --lab: #8aa6dc;
     }
   }
   :root[data-theme="dark"] {
@@ -29,6 +31,7 @@
     --grid: #2c2c2a; --axis: #383835; --ring: rgba(255,255,255,0.10); --up: #0ca30c; --hover: rgba(255,255,255,0.05);
     --icu: #3987e5; --rn: #d95926; --medic: #199e70; --yt: #c98500;
       --rhea: #6fa35f; --winery: #c4507f; --franchifi: #8f78e6; --gripwheels: #8d96a2; --yt-rheafi: #d9774a;
+      --rt: #2fb5b5; --er: #e05a75; --ekg: #d264b8; --np: #a2c22a; --pharm: #7b8fe0; --lab: #8aa6dc;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -95,7 +98,7 @@
 <div class="tip" id="tip"></div>
 <script>
 const DATA = /*DATA*/null;
-const ACCOUNTS = ['icu', 'rn', 'medic', 'rhea', 'winery', 'franchifi', 'gripwheels', 'yt', 'yt-rheafi'];
+const ACCOUNTS = ['icu', 'rn', 'medic', 'rt', 'er', 'ekg', 'np', 'pharm', 'lab', 'rhea', 'winery', 'franchifi', 'gripwheels', 'yt', 'yt-rheafi'];
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => (n == null || Number.isNaN(n) ? '–' : Math.round(n).toLocaleString('en-US'));
 const color = (a) => `var(--${a})`;
@@ -110,7 +113,7 @@ function init() {
   const opts = (el, values, all) => { el.innerHTML = [`<option value="">${all}</option>`, ...values.map((v) => `<option value="${esc(v[0])}">${esc(v[1])}</option>`)].join(''); };
   opts($('f-account'), ACCOUNTS.filter((a) => DATA.followers[a] || DATA.media.some((m) => m.account === a)).map((a) => [a, DATA.labels[a]]), 'All accounts');
   opts($('f-topic'), [...new Set(DATA.media.map((m) => m.topic).filter(Boolean))].sort().map((t) => [t, t]), 'All topics');
-  opts($('f-slot'), ['7 AM', 'noon', '3 PM', '6 PM', 'YouTube'].filter((s) => DATA.media.some((m) => m.slot === s)).map((s) => [s, s]), 'All slots');
+  opts($('f-slot'), ['7 AM', 'noon', '3 PM', '6 PM', '8 PM', 'YouTube'].filter((s) => DATA.media.some((m) => m.slot === s)).map((s) => [s, s]), 'All slots');
   try { const saved = JSON.parse(localStorage.getItem('basics-filters') || '{}'); for (const k of ['account', 'topic', 'slot']) if (saved[k]) $(`f-${k}`).value = saved[k]; } catch {}
   for (const k of ['account', 'topic', 'slot']) $(`f-${k}`).addEventListener('change', render);
   render();

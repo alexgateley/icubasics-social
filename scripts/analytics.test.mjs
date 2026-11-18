@@ -49,7 +49,8 @@ function run(dir, args, env = {}) {
   return { status: r.status, out: r.stdout + r.stderr, calls: fs.readFileSync(logFile, 'utf8').split('\n').filter(Boolean) };
 }
 const google = (calls) => calls.filter((c) => /googleapis/.test(c));
-const instagram = (calls) => calls.filter((c) => /graph\.instagram/.test(c));
+const instagram = (calls) => calls.filter((c) => /graph\.(instagram|facebook)/.test(c));
+const ER_ID = '17841479868648523'; // @theerbasics: a system-user token (EAA...) in the fake keychain
 
 test('--only instagram makes no YouTube call and leaves every YouTube line as it was', () => {
   const dir = seed();
@@ -124,4 +125,38 @@ test('one account failing keeps that account\'s lines and exits non-zero', () =>
   assert.equal(r.status, 1);
   assert.deepEqual(readLines(dir, 'media.jsonl').filter((x) => x.account === 'icu'), before);
   assert.equal(JSON.parse(read(dir, 'state.json')).igAccounts.icu.status, 'error');
+});
+
+test('a system-user token (EAA...) reads through graph.facebook.com by account ID, is never refreshed, and never expires', () => {
+  const dir = seed();
+  // A refresh date over a week old would make an Instagram-login token refresh tonight
+  const state = JSON.parse(read(dir, 'state.json'));
+  state.igTokens.er = { refreshedAt: dayBefore(30) + 'T00:00:00Z', expiresAt: dayBefore(-30) + 'T00:00:00Z' };
+  fs.writeFileSync(path.join(dir, 'state.json'), JSON.stringify(state));
+  const r = run(dir, ['fetch', '--only', 'instagram'], { INSIGHTS_DAYS: '7' });
+  assert.equal(r.status, 0, r.out);
+  const fb = r.calls.filter((c) => c.includes('graph.facebook.com'));
+  assert.ok(fb.includes(`fetch https://graph.facebook.com/v25.0/${ER_ID}`), fb.join('\n'));
+  assert.ok(fb.includes(`fetch https://graph.facebook.com/v25.0/${ER_ID}/media`));
+  assert.ok(fb.some((c) => c.includes(`/${ER_ID}-reel-`) && c.endsWith('/insights')), 'Reel insights');
+  assert.ok(fb.includes(`fetch https://graph.facebook.com/v25.0/${ER_ID}/insights`), 'follower history');
+  assert.ok(fb.every((c) => !/\/me\b|refresh_access_token/.test(c)));
+  assert.ok(r.calls.filter((c) => c.includes('graph.instagram.com')).every((c) => !c.includes(ER_ID)));
+  assert.ok(!r.calls.some((c) => c.startsWith('exec security -i')), 'no token written to the keychain');
+  assert.ok(!r.out.includes('EAAfake'), 'the token is never printed');
+  const after = JSON.parse(read(dir, 'state.json'));
+  assert.deepEqual([after.igTokens.er.kind, after.igTokens.er.neverExpires, after.igTokens.er.expiresAt], ['system-user', true, undefined]);
+  assert.equal(after.igAccounts.er.status, 'ok');
+  assert.equal(after.igTokens.icu.refreshedAt, state.igTokens.icu.refreshedAt, 'Instagram-login tokens keep their dates');
+  assert.deepEqual(readLines(dir, 'accounts.jsonl').filter((x) => x.account === 'er' && x.date === today && !x.estimated).map((x) => x.followers), [777]);
+  assert.ok(readLines(dir, 'media.jsonl').some((x) => x.account === 'er' && x.views === 500));
+});
+
+test('a token without the insights permission costs one insights call per Reel, not one per metric', () => {
+  const dir = seed();
+  const r = run(dir, ['fetch', '--only', 'instagram'], { INSIGHTS_DAYS: '7', FAKE_NO_INSIGHTS_PERMISSION: '1' });
+  assert.equal(r.status, 0, r.out);
+  const reels = r.calls.filter((c) => /\/(\d+-)?reel-\d+\/insights$/.test(c)).length;
+  assert.equal(reels, 13 * 7, 'seven Reels in the last 7 days per account, one call each');
+  assert.match(r.out, /does not have permission/);
 });

@@ -19,12 +19,13 @@
 #   sh scripts/setup-keychain.sh gripwheels # @griptheorywheels (IG_USER_ID_GRIPWHEELS, IG_ACCESS_TOKEN_GRIPWHEELS)
 #   sh scripts/setup-keychain.sh all        # all thirteen in turn; an empty Enter at a token prompt skips that account
 #
-# The user ID is filled in (press Enter to keep it), so only the token needs pasting (rt has no ID on
-# file yet: type the one shown next to the token in the Meta dashboard). The token can
+# The user ID is filled in (press Enter to keep it), so only the token needs pasting. The token can
 # be the one the posting job uses or a new one from the Meta dashboard (Instagram → API setup with
 # Instagram business login → Generate token); it needs instagram_business_basic and
 # instagram_business_manage_insights. analytics.mjs refreshes it in the keychain every week. The
-# YouTube credentials go in with scripts/setup-youtube.sh.
+# Basics Posting app's accounts (rt, er, ekg, np, pharm, lab) use a Unified-login system-user token instead
+# (starts with EAA, never expires, needs instagram_basic and instagram_manage_insights): it is checked on
+# graph.facebook.com and never refreshed. The YouTube credentials go in with scripts/setup-youtube.sh.
 set -eu
 # KEYCHAIN_SERVICE exists only so tests can use throwaway items (as in keychain.mjs)
 SERVICE="${KEYCHAIN_SERVICE:-icubasics-social}"
@@ -55,8 +56,12 @@ info() {
 trap 'stty echo 2>/dev/null || true' EXIT
 trap 'stty echo 2>/dev/null || true; exit 130' INT TERM
 
-# curl reads the URL from stdin (-K -), so the token stays off the command line
-get() { printf 'url = "https://graph.instagram.com/v25.0/%s&access_token=%s"\n' "$1" "$IG_ACCESS_TOKEN" | curl -s -K -; }
+# curl reads the URL from stdin (-K -), so the token stays off the command line. A system-user token (EAA...)
+# works only on graph.facebook.com; an Instagram-login token only on graph.instagram.com.
+get() {
+  case "$IG_ACCESS_TOKEN" in EAA*) HOST=graph.facebook.com ;; *) HOST=graph.instagram.com ;; esac
+  printf 'url = "https://%s/v25.0/%s&access_token=%s"\n' "$HOST" "$1" "$IG_ACCESS_TOKEN" | curl -s -K -
+}
 
 # setup_one <account> <skippable 0|1>; returns 0 stored, 2 skipped, 1 failed
 setup_one() {
@@ -83,7 +88,11 @@ setup_one() {
   case "$IG_USER_ID" in *[!0-9]*) echo "The Instagram user ID is a number (it looks like a token was pasted there)."; return 1 ;; esac
   case "$IG_ACCESS_TOKEN" in *[\ \"\\]*) echo "Unexpected spaces or quotes in the token; paste it again."; return 1 ;; esac
 
-  ME=$(get "me?fields=user_id,username")
+  # A system-user token's "me" is the system user, so it is checked against the account's own ID
+  case "$IG_ACCESS_TOKEN" in
+    EAA*) ME=$(get "$IG_USER_ID?fields=id,username") ;;
+    *) ME=$(get "me?fields=user_id,username") ;;
+  esac
   case "$ME" in
     *username*) echo "Token check: $ME" ;;
     *) echo "Token check failed: $ME"; return 1 ;;
@@ -95,7 +104,7 @@ setup_one() {
   INS=$(get "$IG_USER_ID/insights?metric=reach&period=day&metric_type=total_value")
   case "$INS" in
     *'"data"'*) echo "Insights check: OK" ;;
-    *) echo "Insights check failed (the token needs instagram_business_manage_insights): $INS"; return 1 ;;
+    *) echo "Insights check failed (the token needs instagram_business_manage_insights, or instagram_manage_insights for a system-user token): $INS"; return 1 ;;
   esac
 
   for pair in "IG_USER_ID$SUFFIX:$IG_USER_ID" "IG_ACCESS_TOKEN$SUFFIX:$IG_ACCESS_TOKEN"; do

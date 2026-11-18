@@ -8,6 +8,7 @@ const log = (s) => fs.appendFileSync(process.env.FAKE_LOG, `${s}\n`);
 const json = (body, status = 200) => new Response(JSON.stringify(body), { status });
 const ago = (days) => new Date(Date.now() - days * 86400000).toISOString();
 const ICU = '17841423460793482';
+const ER = '17841479868648523'; // @theerbasics: a system-user token (EAA...), answered only on graph.facebook.com
 const failMessages = process.env.FAKE_FAIL_MESSAGES; // an error code, e.g. 10 (permission)
 
 const media = {
@@ -16,6 +17,7 @@ const media = {
     { id: 'reel-quiet', timestamp: ago(2), comments_count: 0, media_product_type: 'REELS' },
     { id: 'reel-old', timestamp: ago(9), comments_count: 3, media_product_type: 'REELS' },
   ],
+  [ER]: [{ id: 'er-reel', timestamp: ago(1), comments_count: 1, media_product_type: 'REELS' }],
 };
 const comments = {
   'reel-new': [
@@ -25,6 +27,7 @@ const comments = {
     { id: 'c4', text: 'STEMI', timestamp: ago(0.2), from: { id: ICU, username: 'icubasics' } },
     { id: 'c5', text: 'labs', timestamp: ago(0.1), from: { id: 'u5', username: 'nurse5' } },
   ],
+  'er-reel': [{ id: 'e1', text: 'APP', timestamp: ago(0.5), from: { id: 'u7', username: 'ernurse' } }],
   'reel-old': [{ id: 'c9', text: 'ABG', timestamp: ago(8), from: { id: 'u9', username: 'old' } }],
 };
 
@@ -32,8 +35,10 @@ globalThis.fetch = async (input, init = {}) => {
   const url = new URL(String(input));
   const method = init.method ?? 'GET';
   const body = init.body ? JSON.parse(init.body) : null;
-  log(`${method} ${url.pathname}${body?.recipient ? ` ${body.recipient.comment_id} ${JSON.stringify(body.message.text)}` : ''}${url.searchParams.get('message') ? ` ${url.searchParams.get('message')}` : ''}`);
-  if (url.hostname !== 'graph.instagram.com') return json({ error: { message: 'network blocked' } }, 500);
+  log(`${method} ${url.pathname}${body?.recipient ? ` ${body.recipient.comment_id} ${JSON.stringify(body.message.text)}` : ''}${url.searchParams.get('message') ? ` ${url.searchParams.get('message')}` : ''}${url.hostname === 'graph.facebook.com' ? ' [graph.facebook.com]' : ''}`);
+  if (url.hostname !== 'graph.instagram.com' && url.hostname !== 'graph.facebook.com') return json({ error: { message: 'network blocked' } }, 500);
+  // As Meta does: a system-user token (EAA...) works only on graph.facebook.com, an Instagram-login token only on graph.instagram.com
+  if ((url.searchParams.get('access_token') ?? '').startsWith('EAA') !== (url.hostname === 'graph.facebook.com')) return json({ error: { message: 'Invalid OAuth access token - Cannot parse access token', code: 190 } }, 400);
   const parts = url.pathname.split('/').filter(Boolean); // v25.0, id, edge
   const [, id, edge] = parts;
   if (edge === 'media') return json({ data: media[id] ?? [] });
@@ -48,7 +53,7 @@ globalThis.fetch = async (input, init = {}) => {
 
 cp.execFileSync = function (cmd, args = []) {
   log(`exec ${cmd} ${args[0] ?? ''} ${args.includes('-a') ? args[args.indexOf('-a') + 1] : ''}`);
-  if (cmd === 'security' && args[0] === 'find-generic-password') return args.includes('IG_ACCESS_TOKEN') ? 'fake-token\n' : '';
+  if (cmd === 'security' && args[0] === 'find-generic-password') return args.includes('IG_ACCESS_TOKEN') ? 'fake-token\n' : args.includes('IG_ACCESS_TOKEN_ER') ? 'EAAfakeSystemUserToken\n' : '';
   throw new Error('blocked by the fake');
 };
 syncBuiltinESMExports();

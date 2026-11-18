@@ -196,7 +196,9 @@ subscribersGained), appends them to `~/basics-growth-work/analytics/*.jsonl`, an
 `~/basics-growth-work/analytics/dashboard.html` (followers over time, top 10 this week, every Reel
 and Short with filters by account, topic and slot). Topics and slots come from the markers in
 `published*/`, YouTube topics from the scheduler's `uploaded.json`. It refreshes its own keychain
-copy of each Instagram token weekly, keeps one follower line per account per day in `accounts.jsonl`
+copy of each Instagram-login token (IGAA...) weekly; the Basics Posting app's system-user tokens (EAA...: rt, er,
+ekg, np, pharm, lab) are read through graph.facebook.com instead, never refreshed, and recorded as never
+expiring. It keeps one follower line per account per day in `accounts.jsonl`
 (both YouTube channels too), backfills earlier days as `"estimated": true` lines where the APIs allow
 (YouTube subscribersGained − subscribersLost by day; Instagram follower_count, 100+ followers only), and records the date in `state.json` (`igTokens`), which the
 Basics Social Mac app shows.
@@ -244,5 +246,9 @@ Setup, once per account:
    comment a keyword, run `DRY_RUN=1 node scripts/comment-replies.mjs`, then `node scripts/comment-replies.mjs`.
 4. Install the launch agent (command in the plist), then add the "Comment X" line to queued captions:
    `node scripts/add-keyword-cta.mjs` (preview), `--apply`, commit, push. `--remove --apply` takes it out.
+
+Accounts with a system-user token (EAA..., graph.facebook.com: rt, er, ekg, np, pharm, lab) are skipped for now:
+with Facebook Login a private reply goes to the linked Facebook Page (`POST /{page-id}/messages`, a Page token,
+`pages_messaging`), which is not set up. `--check` still reads their Reels and comments.
 
 Tests: `node --test scripts/comment-replies.test.mjs` (fake Instagram, no network).
