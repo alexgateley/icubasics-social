@@ -35,19 +35,25 @@
       "rn": "/sheets/electrolytes.html",
       "medic": "/sheets/electrolytes.html",
       "lab": "https://rnbasics.com/sheets/electrolytes.html",
-      "np": "https://rnbasics.com/sheets/electrolytes.html"
+      "np": "https://rnbasics.com/sheets/electrolytes.html",
+      "er": "https://icubasics.com/sheets/electrolytes.html",
+      "rt": "https://icubasics.com/sheets/electrolytes.html"
     },
     "SEPSIS": {
       "label": "sepsis cheat sheet",
       "icu": "/sheets/sepsis-bundle.html",
       "rn": "/sheets/sepsis-bundle.html",
-      "medic": "/sheets/prehospital-sepsis.html"
+      "medic": "/sheets/prehospital-sepsis.html",
+      "er": "https://icubasics.com/sheets/sepsis-bundle.html",
+      "rt": "https://icubasics.com/sheets/sepsis-bundle.html"
     },
     "SHOCK": {
       "label": "shock types cheat sheet",
       "icu": "/sheets/shock-types.html",
       "rn": "/sheets/shock-types.html",
-      "medic": "/sheets/shock-types.html"
+      "medic": "/sheets/shock-types.html",
+      "er": "https://icubasics.com/sheets/shock-types.html",
+      "rt": "https://icubasics.com/sheets/shock-types.html"
     },
     "PRESSORS": {
       "label": "vasopressor cheat sheet",
@@ -57,7 +63,9 @@
       ],
       "icu": "/sheets/vasopressors.html",
       "rn": "/sheets/shock-types.html",
-      "medic": "/sheets/vasopressors.html"
+      "medic": "/sheets/vasopressors.html",
+      "er": "https://icubasics.com/sheets/vasopressors.html",
+      "rt": "https://icubasics.com/sheets/vasopressors.html"
     },
     "ABG": {
       "label": "ABG cheat sheet",
@@ -68,7 +76,9 @@
       "rn": "/sheets/abg-steps.html",
       "medic": "/sheets/abg-steps.html",
       "lab": "https://icubasics.com/sheets/abg-steps.html",
-      "np": "https://icubasics.com/sheets/abg-steps.html"
+      "np": "https://icubasics.com/sheets/abg-steps.html",
+      "er": "https://icubasics.com/sheets/abg-steps.html",
+      "rt": "https://icubasics.com/sheets/abg-steps.html"
     },
     "DKA": {
       "label": "DKA and HHS cheat sheet",
@@ -77,7 +87,8 @@
       ],
       "icu": "/sheets/dka-hhs.html",
       "rn": "/sheets/dka-hhs.html",
-      "np": "https://icubasics.com/sheets/dka-hhs.html"
+      "np": "https://icubasics.com/sheets/dka-hhs.html",
+      "er": "https://icubasics.com/sheets/dka-hhs.html"
     },
     "INSULIN": {
       "label": "insulin guide",
@@ -85,7 +96,8 @@
       "rn": "/sheets/insulin-types-chart.html",
       "medic": "/drugs/insulin.html",
       "pharm": "https://rnbasics.com/sheets/insulin-types-chart.html",
-      "np": "https://rnbasics.com/sheets/insulin-types-chart.html"
+      "np": "https://rnbasics.com/sheets/insulin-types-chart.html",
+      "er": "https://icubasics.com/drugs/insulin.html"
     },
     "SUGAR": {
       "label": "low blood sugar drug card",
@@ -94,14 +106,16 @@
       ],
       "icu": "/drugs/dextrose.html",
       "rn": "/sheets/insulin-types-chart.html",
-      "medic": "/drugs/dextrose.html"
+      "medic": "/drugs/dextrose.html",
+      "er": "https://icubasics.com/drugs/dextrose.html"
     },
     "DIABETES": {
       "label": "diabetes cheat sheet",
       "icu": "/sheets/dka-hhs.html",
       "rn": "/sheets/insulin-types-chart.html",
       "medic": "/drugs/insulin.html",
-      "np": "https://rnbasics.com/sheets/insulin-types-chart.html"
+      "np": "https://rnbasics.com/sheets/insulin-types-chart.html",
+      "er": "https://icubasics.com/sheets/dka-hhs.html"
     },
     "HEPARIN": {
       "label": "blood thinner cheat sheet",
@@ -113,7 +127,8 @@
       "medic": "/drugs/heparin.html",
       "lab": "https://icubasics.com/sheets/coagulation.html",
       "pharm": "https://rnbasics.com/drugs/heparin.html",
-      "np": "https://rnbasics.com/drugs/heparin.html"
+      "np": "https://rnbasics.com/drugs/heparin.html",
+      "er": "https://icubasics.com/sheets/coagulation.html"
     },
     "WARFARIN": {
       "label": "warfarin drug card",
@@ -121,7 +136,8 @@
       "rn": "/drugs/warfarin.html",
       "medic": "/drugs/warfarin.html",
       "pharm": "https://rnbasics.com/drugs/warfarin.html",
-      "np": "https://rnbasics.com/drugs/warfarin.html"
+      "np": "https://rnbasics.com/drugs/warfarin.html",
+      "er": "https://icubasics.com/drugs/warfarin.html"
     },
     "DOAC": {
       "label": "blood thinner reversal card",
@@ -132,7 +148,8 @@
       "rn": "/drugs/apixaban.html",
       "medic": "/drugs/apixaban.html",
       "pharm": "https://rnbasics.com/drugs/apixaban.html",
-      "np": "https://rnbasics.com/drugs/apixaban.html"
+      "np": "https://rnbasics.com/drugs/apixaban.html",
+      "er": "https://icubasics.com/sheets/coagulation.html"
     },
     "HF": {
       "label": "heart failure cheat sheet",
@@ -142,7 +159,9 @@
       "icu": "/sheets/heart-failure.html",
       "rn": "/sheets/heart-failure.html",
       "medic": "/sheets/cardiorespiratory-look-alikes.html",
-      "np": "https://icubasics.com/sheets/heart-failure.html"
+      "np": "https://icubasics.com/sheets/heart-failure.html",
+      "er": "https://icubasics.com/sheets/heart-failure.html",
+      "rt": "https://icubasics.com/sheets/heart-failure.html"
     },
     "EKG": {
       "label": "rhythm cheat sheet",
@@ -155,25 +174,32 @@
       "rn": "/sheets/nclex-ekg-rhythms.html",
       "medic": "/sheets/rhythm-gallery.html",
       "ekg": "https://icubasics.com/sheets/rhythm-gallery.html",
-      "np": "https://icubasics.com/sheets/rhythm-gallery.html"
+      "np": "https://icubasics.com/sheets/rhythm-gallery.html",
+      "er": "https://icubasics.com/sheets/rhythm-gallery.html",
+      "rt": "https://icubasics.com/sheets/rhythm-gallery.html"
     },
     "STEMI": {
       "label": "STEMI cheat sheet",
       "icu": "/sheets/acs-stemi.html",
       "medic": "/sheets/acs-stemi.html",
       "ekg": "https://icubasics.com/sheets/acs-stemi.html",
-      "np": "https://icubasics.com/sheets/acs-stemi.html"
+      "np": "https://icubasics.com/sheets/acs-stemi.html",
+      "er": "https://icubasics.com/sheets/acs-stemi.html",
+      "rt": "https://icubasics.com/sheets/acs-stemi.html"
     },
     "STROKE": {
       "label": "stroke cheat sheet",
       "icu": "/sheets/neuro-icp-stroke.html",
-      "medic": "/sheets/prehospital-stroke-stemi.html"
+      "medic": "/sheets/prehospital-stroke-stemi.html",
+      "er": "https://icubasics.com/sheets/neuro-icp-stroke.html"
     },
     "LABS": {
       "label": "lab values cheat sheet",
       "rn": "/sheets/lab-values.html",
       "lab": "https://rnbasics.com/sheets/lab-values.html",
-      "np": "https://rnbasics.com/sheets/lab-values.html"
+      "np": "https://rnbasics.com/sheets/lab-values.html",
+      "er": "https://rnbasics.com/sheets/lab-values.html",
+      "rt": "https://rnbasics.com/sheets/lab-values.html"
     },
     "MATH": {
       "label": "med math cheat sheet",
@@ -181,13 +207,15 @@
         "DOSAGE"
       ],
       "rn": "/sheets/med-math.html",
-      "pharm": "https://rnbasics.com/sheets/med-math.html"
+      "pharm": "https://rnbasics.com/sheets/med-math.html",
+      "er": "https://rnbasics.com/sheets/med-math.html"
     },
     "ENDO": {
       "label": "endocrine emergencies cheat sheet",
       "icu": "/sheets/endocrine-emergencies.html",
       "medic": "/sheets/medical-neuro-endocrine-blood.html",
-      "np": "https://icubasics.com/sheets/endocrine-emergencies.html"
+      "np": "https://icubasics.com/sheets/endocrine-emergencies.html",
+      "er": "https://icubasics.com/sheets/endocrine-emergencies.html"
     },
     "PHARM": {
       "label": "drug classes cheat sheet",
@@ -199,7 +227,8 @@
       "rn": "/sheets/pharm-classes-suffixes.html",
       "medic": "/sheets/ems-pharmacology.html",
       "pharm": "https://rnbasics.com/sheets/pharm-classes-suffixes.html",
-      "np": "https://rnbasics.com/sheets/pharm-classes-suffixes.html"
+      "np": "https://rnbasics.com/sheets/pharm-classes-suffixes.html",
+      "er": "https://icubasics.com/drugs/index.html"
     },
     "BETA": {
       "label": "beta blocker drug card",
@@ -207,13 +236,15 @@
       "rn": "/drugs/metoprolol.html",
       "medic": "/drugs/metoprolol.html",
       "pharm": "https://rnbasics.com/drugs/metoprolol.html",
-      "np": "https://rnbasics.com/drugs/metoprolol.html"
+      "np": "https://rnbasics.com/drugs/metoprolol.html",
+      "er": "https://icubasics.com/drugs/metoprolol.html"
     },
     "ADENOSINE": {
       "label": "adenosine drug card",
       "icu": "/drugs/adenosine.html",
       "rn": "/drugs/adenosine.html",
-      "medic": "/drugs/adenosine.html"
+      "medic": "/drugs/adenosine.html",
+      "er": "https://icubasics.com/drugs/adenosine.html"
     },
     "EPI": {
       "label": "epinephrine drug card",
@@ -221,7 +252,8 @@
         "EPINEPHRINE"
       ],
       "icu": "/drugs/epinephrine.html",
-      "medic": "/drugs/epinephrine.html"
+      "medic": "/drugs/epinephrine.html",
+      "er": "https://icubasics.com/drugs/epinephrine.html"
     },
     "DIGOXIN": {
       "label": "digoxin drug card",
@@ -231,14 +263,17 @@
       "icu": "/drugs/digoxin.html",
       "rn": "/drugs/digoxin.html",
       "medic": "/drugs/digoxin.html",
-      "pharm": "https://rnbasics.com/drugs/digoxin.html"
+      "pharm": "https://rnbasics.com/drugs/digoxin.html",
+      "er": "https://icubasics.com/drugs/digoxin.html"
     },
     "NITRO": {
       "label": "nitroglycerin drug card",
       "icu": "/drugs/nitroglycerin.html",
       "rn": "/drugs/nitroglycerin.html",
       "medic": "/drugs/nitroglycerin.html",
-      "pharm": "https://rnbasics.com/drugs/nitroglycerin.html"
+      "pharm": "https://rnbasics.com/drugs/nitroglycerin.html",
+      "er": "https://icubasics.com/drugs/nitroglycerin.html",
+      "rt": "https://icubasics.com/drugs/nitroglycerin.html"
     },
     "LASIX": {
       "label": "furosemide drug card",
@@ -249,7 +284,8 @@
       "rn": "/drugs/furosemide.html",
       "medic": "/drugs/furosemide.html",
       "pharm": "https://rnbasics.com/drugs/furosemide.html",
-      "np": "https://rnbasics.com/drugs/furosemide.html"
+      "np": "https://rnbasics.com/drugs/furosemide.html",
+      "er": "https://icubasics.com/drugs/furosemide.html"
     },
     "OPIOID": {
       "label": "naloxone drug card",
@@ -261,7 +297,8 @@
       "icu": "/drugs/naloxone.html",
       "rn": "/drugs/naloxone.html",
       "medic": "/drugs/naloxone.html",
-      "pharm": "https://rnbasics.com/drugs/naloxone.html"
+      "pharm": "https://rnbasics.com/drugs/naloxone.html",
+      "er": "https://icubasics.com/drugs/naloxone.html"
     },
     "BENZO": {
       "label": "lorazepam drug card",
@@ -271,7 +308,8 @@
       "icu": "/drugs/lorazepam.html",
       "rn": "/drugs/lorazepam.html",
       "medic": "/drugs/lorazepam.html",
-      "pharm": "https://rnbasics.com/drugs/lorazepam.html"
+      "pharm": "https://rnbasics.com/drugs/lorazepam.html",
+      "er": "https://icubasics.com/drugs/lorazepam.html"
     },
     "AMIODARONE": {
       "label": "amiodarone drug card",
@@ -280,12 +318,14 @@
       ],
       "icu": "/drugs/amiodarone.html",
       "rn": "/drugs/amiodarone.html",
-      "medic": "/drugs/amiodarone.html"
+      "medic": "/drugs/amiodarone.html",
+      "er": "https://icubasics.com/drugs/amiodarone.html"
     },
     "ATROPINE": {
       "label": "atropine drug card",
       "icu": "/drugs/atropine.html",
-      "medic": "/drugs/atropine.html"
+      "medic": "/drugs/atropine.html",
+      "er": "https://icubasics.com/drugs/atropine.html"
     },
     "DILTIAZEM": {
       "label": "diltiazem drug card",
@@ -295,14 +335,16 @@
       "icu": "/drugs/diltiazem.html",
       "rn": "/drugs/diltiazem.html",
       "medic": "/drugs/diltiazem.html",
-      "pharm": "https://rnbasics.com/drugs/diltiazem.html"
+      "pharm": "https://rnbasics.com/drugs/diltiazem.html",
+      "er": "https://icubasics.com/drugs/diltiazem.html"
     },
     "LITHIUM": {
       "label": "mental health meds cheat sheet",
       "icu": "/sheets/mental-health-meds.html",
       "rn": "/sheets/mental-health-meds.html",
       "pharm": "https://rnbasics.com/sheets/mental-health-meds.html",
-      "np": "https://rnbasics.com/sheets/mental-health-meds.html"
+      "np": "https://rnbasics.com/sheets/mental-health-meds.html",
+      "er": "https://icubasics.com/sheets/mental-health-meds.html"
     },
     "STEROIDS": {
       "label": "hydrocortisone drug card",
@@ -312,7 +354,9 @@
       "icu": "/drugs/hydrocortisone.html",
       "rn": "/drugs/hydrocortisone.html",
       "medic": "/drugs/hydrocortisone.html",
-      "pharm": "https://rnbasics.com/drugs/hydrocortisone.html"
+      "pharm": "https://rnbasics.com/drugs/hydrocortisone.html",
+      "er": "https://icubasics.com/drugs/hydrocortisone.html",
+      "rt": "https://icubasics.com/drugs/hydrocortisone.html"
     },
     "VANCO": {
       "label": "vancomycin drug card",
@@ -322,7 +366,8 @@
       "icu": "/drugs/vancomycin.html",
       "rn": "/drugs/vancomycin.html",
       "medic": "/drugs/vancomycin.html",
-      "pharm": "https://rnbasics.com/drugs/vancomycin.html"
+      "pharm": "https://rnbasics.com/drugs/vancomycin.html",
+      "er": "https://icubasics.com/drugs/vancomycin.html"
     },
     "SUX": {
       "label": "succinylcholine drug card",
@@ -330,7 +375,9 @@
         "SUCCINYLCHOLINE"
       ],
       "icu": "/drugs/succinylcholine.html",
-      "medic": "/drugs/succinylcholine.html"
+      "medic": "/drugs/succinylcholine.html",
+      "er": "https://icubasics.com/drugs/succinylcholine.html",
+      "rt": "https://icubasics.com/drugs/succinylcholine.html"
     },
     "MAGNESIUM": {
       "label": "magnesium drug card",
@@ -339,12 +386,16 @@
       ],
       "icu": "/drugs/magnesium.html",
       "rn": "/drugs/magnesium.html",
-      "medic": "/drugs/magnesium.html"
+      "medic": "/drugs/magnesium.html",
+      "er": "https://icubasics.com/drugs/magnesium.html",
+      "rt": "https://icubasics.com/drugs/magnesium.html"
     },
     "KETAMINE": {
       "label": "ketamine drug card",
       "icu": "/drugs/ketamine.html",
-      "medic": "/drugs/ketamine.html"
+      "medic": "/drugs/ketamine.html",
+      "er": "https://icubasics.com/drugs/ketamine.html",
+      "rt": "https://icubasics.com/drugs/ketamine.html"
     },
     "TPA": {
       "label": "alteplase drug card",
@@ -353,7 +404,8 @@
       ],
       "icu": "/drugs/alteplase.html",
       "rn": "/drugs/alteplase.html",
-      "medic": "/drugs/alteplase.html"
+      "medic": "/drugs/alteplase.html",
+      "er": "https://icubasics.com/drugs/alteplase.html"
     },
     "PRELOAD": {
       "label": "hemodynamics cheat sheet",
@@ -362,7 +414,9 @@
       ],
       "icu": "/sheets/hemodynamic-normals.html",
       "rn": "/sheets/heart-failure.html",
-      "medic": "/sheets/hemodynamic-normals.html"
+      "medic": "/sheets/hemodynamic-normals.html",
+      "er": "https://icubasics.com/sheets/hemodynamic-normals.html",
+      "rt": "https://icubasics.com/sheets/hemodynamic-normals.html"
     },
     "ALBUTEROL": {
       "label": "albuterol drug card",
@@ -374,7 +428,9 @@
       "rn": "/drugs/albuterol.html",
       "medic": "/drugs/albuterol.html",
       "pharm": "https://rnbasics.com/drugs/albuterol.html",
-      "np": "https://rnbasics.com/drugs/albuterol.html"
+      "np": "https://rnbasics.com/drugs/albuterol.html",
+      "er": "https://icubasics.com/drugs/albuterol.html",
+      "rt": "https://icubasics.com/drugs/albuterol.html"
     },
     "QTC": {
       "label": "QTc calculator",
@@ -509,8 +565,18 @@
     "sb-dm-pills-cause-lows": "SUGAR",
     "sb-preload-60-seconds": "PRELOAD",
     "sb-preload-nitro-hydralazine": "PRELOAD",
-    "sb-preload-weak-heart": "PRELOAD"
+    "sb-preload-weak-heart": "PRELOAD",
+    "antidotes-digoxin-fab-and-potassium": "DIGOXIN",
+    "ob-magnesium-toxicity-and-reflexes": "MAGNESIUM",
+    "ob-calcium-gluconate-at-the-bedside": "MAGNESIUM",
+    "stemi-inferior-mi-and-nitro": "STEMI",
+    "stemi-lbbb-and-sgarbossa": "STEMI",
+    "antidotes-naloxone-can-wear-off": "OPIOID",
+    "clip-vomiting-vs-diarrhea-abg": "ABG",
+    "pairs-ards-vs-cardiogenic-pulmonary-edema": "HF",
+    "clip-cpap-and-nitro-for-pulmonary-edema": "HF"
   },
   "_rtNote": "rt points to icubasics.com until respiratorybasics.com and the RT app are live (Alex 2026-11-15)",
-  "_sisterSitesNote": "ekg, np, pharm and lab point to free pages on icubasics.com and rnbasics.com while ekgtechbasics.com, npbasics.com, pharmtechbasics.com and medlabbasics.com are coming-soon pages (2026-11-18); move them to their own sites' paths once those have pages. QTC, PACING, COAG, TRANSFUSION and ALERT were added for them and have no icu/rn/medic page."
+  "_sisterSitesNote": "ekg, np, pharm and lab point to free pages on icubasics.com and rnbasics.com while ekgtechbasics.com, npbasics.com, pharmtechbasics.com and medlabbasics.com are coming-soon pages (2026-11-18); move them to their own sites' paths once those have pages. QTC, PACING, COAG, TRANSFUSION and ALERT were added for them and have no icu/rn/medic page.",
+  "_erRtNote": "er and rt point to free pages on icubasics.com/rnbasics.com/medicbasics.com (2026-11-18) until erbasics.com and respiratorybasics.com have pages."
 }

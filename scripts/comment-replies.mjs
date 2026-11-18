@@ -55,8 +55,8 @@ const ACCOUNTS = [
   { account: 'rn', suffix: '_RN', userId: '17841429422921068', handle: 'rnbasicsnclex' },
   { account: 'medic', suffix: '_MEDIC', userId: '17841420840594491', handle: 'themedicbasics' },
   // rt, er, ekg, np, pharm, lab: system-user tokens (graph.facebook.com); only the ones with dms: true send (see the top)
-  { account: 'rt', suffix: '_RT', userId: '17841480403371899', handle: 'respiratorytherapybasics' },
-  { account: 'er', suffix: '_ER', userId: '17841479868648523', handle: 'theerbasics' },
+  { account: 'rt', suffix: '_RT', userId: '17841480403371899', handle: 'respiratorytherapybasics', dms: true },
+  { account: 'er', suffix: '_ER', userId: '17841479868648523', handle: 'theerbasics', dms: true },
   { account: 'ekg', suffix: '_EKG', userId: '17841458933751960', handle: 'ekgtechbasics', dms: true },
   { account: 'np', suffix: '_NP', userId: '17841445521547936', handle: 'npbasics', dms: true },
   { account: 'pharm', suffix: '_PHARM', userId: '17841455056336896', handle: 'pharmtechbasics', dms: true },
