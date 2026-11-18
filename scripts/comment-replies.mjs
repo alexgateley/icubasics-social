@@ -55,13 +55,15 @@ const ACCOUNTS = [
   { account: 'rn', suffix: '_RN', userId: '17841429422921068', handle: 'rnbasicsnclex' },
   { account: 'medic', suffix: '_MEDIC', userId: '17841420840594491', handle: 'themedicbasics' },
   // rt, er, ekg, np, pharm, lab: system-user tokens (graph.facebook.com); only the ones with dms: true send (see the top)
-  { account: 'rt', suffix: '_RT', userId: '17841480403371899', handle: 'respiratorytherapybasics', dms: true },
+  { account: 'rt', suffix: '_RT', userId: '17841480403371899', handle: 'respiratorytherapybasics', dms: true, paused: true },
   { account: 'er', suffix: '_ER', userId: '17841479868648523', handle: 'theerbasics', dms: true },
-  { account: 'ekg', suffix: '_EKG', userId: '17841458933751960', handle: 'ekgtechbasics', dms: true },
-  { account: 'np', suffix: '_NP', userId: '17841445521547936', handle: 'npbasics', dms: true },
-  { account: 'pharm', suffix: '_PHARM', userId: '17841455056336896', handle: 'pharmtechbasics', dms: true },
-  { account: 'lab', suffix: '_LAB', userId: '17841453290927626', handle: 'medlabbasics', dms: true },
-].filter((a) => !process.env.ACCOUNTS || process.env.ACCOUNTS.split(',').includes(a.account));
+  { account: 'ekg', suffix: '_EKG', userId: '17841458933751960', handle: 'ekgtechbasics', dms: true, paused: true },
+  { account: 'np', suffix: '_NP', userId: '17841445521547936', handle: 'npbasics', dms: true, paused: true },
+  { account: 'pharm', suffix: '_PHARM', userId: '17841455056336896', handle: 'pharmtechbasics', dms: true, paused: true },
+  { account: 'lab', suffix: '_LAB', userId: '17841453290927626', handle: 'medlabbasics', dms: true, paused: true },
+].filter((a) => !process.env.ACCOUNTS || process.env.ACCOUNTS.split(',').includes(a.account))
+  // paused: Instagram shows the profile as unavailable (2026-11-18); skip until it is back
+  .filter((a) => !a.paused || process.env.ACCOUNTS);
 
 const log = (msg) => console.log(`${new Date().toISOString()} ${msg}`);
 const scrub = (s) => String(s).replace(/access_token=[^&\s"]+/g, 'access_token=…').replace(/\b(IG|EA)[A-Za-z0-9_-]{40,}/g, '…');

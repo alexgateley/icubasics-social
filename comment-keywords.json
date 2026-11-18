@@ -4,7 +4,7 @@
     "icu": "https://icubasics.com",
     "rn": "https://rnbasics.com",
     "medic": "https://medicbasics.com",
-    "rt": "https://icubasics.com",
+    "rt": "https://respiratorybasics.com",
     "er": "https://erbasics.com",
     "ekg": "https://ekgtechbasics.com",
     "np": "https://npbasics.com",
@@ -479,7 +479,7 @@
       "icu": "/",
       "rn": "/",
       "medic": "/",
-      "rt": "/"
+      "rt": "https://icubasics.com/"
     }
   },
   "slugs": {

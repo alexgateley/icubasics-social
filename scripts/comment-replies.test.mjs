@@ -57,13 +57,14 @@ test('APP / LINK / FREE send the site home (the store buttons) with a natural li
   assert.match(messageFor('SEPSIS', 'rn'), /^Here's your free sepsis/);
 });
 
-test('rt points to ICU Basics until its app is live: only APP gets a DM, with the ICU Basics link', () => {
-  assert.equal(config.sites.rt, 'https://icubasics.com');
+test('rt: respiratorybasics.com has no pages yet, so DMs name ICU Basics as the sister site (APP too)', () => {
+  assert.equal(config.sites.rt, 'https://respiratorybasics.com');
   assert.equal(config.brandNames.rt, 'RT Basics');
+  assert.match(messageFor('APP', 'rt'), /on ICU Basics' site.*\nhttps:\/\/icubasics\.com\//s);
+  assert.match(messageFor('POTASSIUM', 'rt'), /on ICU Basics' site.*\nhttps:\/\/icubasics\.com\/sheets\/electrolytes\.html/s);
   for (const key of Object.keys(config.keywords)) {
     const m = messageFor(key, 'rt');
-    if (key === 'APP') assert.ok(m && m.includes('https://icubasics.com/'), m);
-    else assert.equal(m, null, key);
+    if (m) assert.ok(!m.includes('respiratorybasics.com'), key);
   }
 });
 
@@ -104,11 +105,12 @@ test('a permission error stops the account, retries later, and gives up after th
   assert.match(c.state.replied.c1.status, /^failed/);
 });
 
-test('a system-user account (EAA...) reads through graph.facebook.com and sends nothing', () => {
+test('a system-user account (EAA...) reads through graph.facebook.com; er sends DMs since 2026-11-18', () => {
   const r = run({ ACCOUNTS: 'er' });
   assert.equal(r.status, 0, r.out);
-  assert.deepEqual(r.calls.filter((c) => !c.startsWith('exec')), ['GET /v25.0/17841479868648523/media [graph.facebook.com]']);
-  assert.match(r.out, /system-user token/);
+  const calls = r.calls.filter((c) => !c.startsWith('exec'));
+  assert.equal(calls[0], 'GET /v25.0/17841479868648523/media [graph.facebook.com]');
+  assert.ok(calls.every((c) => c.endsWith('[graph.facebook.com]')), calls.join('\n'));
   assert.ok(!r.out.includes('EAAfake'), 'the token is never printed');
   const check = run({ ACCOUNTS: 'er' }, ['--check']);
   assert.equal(check.status, 0, check.out);
