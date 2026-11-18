@@ -574,7 +574,15 @@
     "antidotes-naloxone-can-wear-off": "OPIOID",
     "clip-vomiting-vs-diarrhea-abg": "ABG",
     "pairs-ards-vs-cardiogenic-pulmonary-edema": "HF",
-    "clip-cpap-and-nitro-for-pulmonary-edema": "HF"
+    "clip-cpap-and-nitro-for-pulmonary-edema": "HF",
+    "antidotes-flumazenil-seizures": "BENZO",
+    "cardiac-drugs-ace-cough-vs-angioedema": "PHARM",
+    "cardiac-drugs-beta-blockers-and-low-sugar": "BETA",
+    "cardiac-drugs-calcium-channel-blockers": "DILTIAZEM",
+    "cardiac-drugs-hold-parameters": "BETA",
+    "cardiac-drugs-never-stop-a-beta-blocker-cold": "BETA",
+    "diabetes-drugs-dka-with-a-normal-glucose": "DKA",
+    "cardiac-arrest-shockable-or-not": "EKG"
   },
   "_rtNote": "rt points to icubasics.com until respiratorybasics.com and the RT app are live (Alex 2026-11-15)",
   "_sisterSitesNote": "ekg, np, pharm and lab point to free pages on icubasics.com and rnbasics.com while ekgtechbasics.com, npbasics.com, pharmtechbasics.com and medlabbasics.com are coming-soon pages (2026-11-18); move them to their own sites' paths once those have pages. QTC, PACING, COAG, TRANSFUSION and ALERT were added for them and have no icu/rn/medic page.",
