@@ -31,6 +31,30 @@ def col(r, *names):
             return r[n]
     return ''
 
+HEADERS = {'ekg': ['EKG TECH', 'EKG'], 'pharm': ['PHARM TECH', 'PHARM'], 'lab': ['MEDLAB', 'LAB'], 'np': ['NP'], 'er': ['ER'], 'rt': ['RT']}
+UPLOADS = os.path.expanduser('~/Desktop/Social Media Uploads')
+
+def desktop_caption(brand, topic):
+    # Same rules as add-short.mjs caption(): the brand's section, the INSTAGRAM REELS block after 'Caption:'
+    f = os.path.join(UPLOADS, topic, 'short - captions and tags.txt')
+    if not os.path.exists(f):
+        return ''
+    parts = re.split(r'^═+ ([A-Z][A-Z ]*?) BASICS ═+$', open(f).read(), flags=re.M)
+    names = HEADERS.get(brand, [brand.upper()])
+    for j in range(1, len(parts), 2):
+        if parts[j] in names:
+            lines = parts[j + 1].split('\n')
+            st = next((k for k, l in enumerate(lines) if l.startswith('INSTAGRAM REELS')), -1)
+            if st < 0 or not lines[st + 1].startswith('Caption:'):
+                return ''
+            out = []
+            for l in lines[st + 2:]:
+                if not l.strip():
+                    break
+                out.append(l)
+            return '\n'.join(out).strip()
+    return ''
+
 def slugify(topic):
     t = re.sub(r'^(RT|ER|Oxygen|CEN|Trauma|EKG|Labs|Pharm|NP)\s*-\s*', '', topic, flags=re.I)
     return re.sub(r'[^a-z0-9]+', '-', t.lower()).strip('-')
@@ -51,7 +75,7 @@ queue = []
 for r in rows:
     slug = slugify(col(r, 'topic', 'topic_folder'))
     mp4 = col(r, 'upload_mp4', 'mp4_path', 'mp4')
-    cap = col(r, 'caption').replace('\\n', '\n').strip()
+    cap = col(r, 'caption').replace('\\n', '\n').strip() or desktop_caption(brand, col(r, 'topic_folder', 'topic'))
     if not slug or slug in staged or not mp4 or not os.path.exists(mp4) or not cap:
         continue
     queue.append((slug, mp4, col(r, 'cover_jpg', 'cover_path', 'cover'), cap, col(r, 'keyword_suggestion', 'keyword')))
@@ -72,8 +96,12 @@ for i in range(days):
         if cover and os.path.exists(cover):
             shutil.copy(cover, f'{folder}/cover.jpg')
         scheds[d][ds] = slug
-        if keyword and keyword.upper() in kw['keywords'] and slug not in kw['slugs']:
-            kw['slugs'][slug] = keyword.upper()
+        if keyword and slug not in kw['slugs']:
+            k = keyword.upper()
+            if k not in kw['keywords']:  # an alias (ACE -> PHARM, SODIUM -> POTASSIUM)
+                k = next((w for w, v in kw['keywords'].items() if k in v.get('aliases', [])), None)
+            if k and brand in kw['keywords'][k]:
+                kw['slugs'][slug] = k
         made.append((ds, d, slug))
 for d, s in scheds.items():
     p = f'{d}/{brand}/{sched_name}'
