@@ -272,7 +272,10 @@ async function publishScheduled(kindName) {
   if (fs.existsSync(marker)) { console.log(`${date} ${label} was already posted (${marker}).`); return; }
   if (!dryRun && (!token || !userId || !base)) fail('IG_ACCESS_TOKEN, IG_USER_ID and PAGES_BASE_URL must all be set');
   const caption = readCaption(path.join(brandDir, folder, 'caption.txt'));
-  const video_url = `${base}/${brandDir}/${folder}/reel.mp4`;
+  // A folder may hold video_url.txt instead of reel.mp4: the video then lives in another public repo (this repo is
+  // near GitHub's 5 GB guideline; Alex 2026-11-18), and only the caption and cover stay here.
+  const urlFile = path.join(brandDir, folder, 'video_url.txt');
+  const video_url = fs.existsSync(urlFile) ? fs.readFileSync(urlFile, 'utf8').trim() : `${base}/${brandDir}/${folder}/reel.mp4`;
   const params = { media_type: 'REELS', video_url, caption, share_to_feed: 'true' };
   if (fs.existsSync(path.join(brandDir, folder, 'cover.jpg'))) params.cover_url = `${base}/${brandDir}/${folder}/cover.jpg`;
   console.log(`Posting ${brand} ${date} ${label} (${folder})\n  ${video_url}`);

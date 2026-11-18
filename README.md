@@ -57,19 +57,19 @@ Generate RN Basics posts with `BRAND=rn scripts/social/push-month.sh <start> <da
 8. **EKG Tech Basics** (@ekgtechbasics, brand `ekg`, added 2026-11-18): the same with
    `sh scripts/setup-secrets.sh ekg` (`IG_USER_ID_EKG`, `IG_ACCESS_TOKEN_EKG`; the user ID 17841458933751960 is
    prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads an
-   `EKG BASICS` captions section and `short - EKG Tech Basics.mp4`). Comment-to-get links go to ekgtechbasics.com.
+   `EKG TECH BASICS` captions section and `short - EKG Tech Basics.mp4`). Comment-to-get links go to ICU Basics' free pages until ekgtechbasics.com has its own.
 9. **NP Basics** (@npbasics, brand `np`, added 2026-11-18): the same with
    `sh scripts/setup-secrets.sh np` (`IG_USER_ID_NP`, `IG_ACCESS_TOKEN_NP`; the user ID 17841445521547936 is
    prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads an
-   `NP BASICS` captions section and `short - NP Basics.mp4`). Comment-to-get links go to npbasics.com.
+   `NP BASICS` captions section and `short - NP Basics.mp4`). Comment-to-get links go to ICU and RN Basics' free pages until npbasics.com has its own.
 10. **Pharm Tech Basics** (@pharmtechbasics, brand `pharm`, added 2026-11-18): the same with
    `sh scripts/setup-secrets.sh pharm` (`IG_USER_ID_PHARM`, `IG_ACCESS_TOKEN_PHARM`; the user ID 17841455056336896 is
    prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads a
-   `PHARM BASICS` captions section and `short - Pharm Tech Basics.mp4`). Comment-to-get links go to pharmtechbasics.com.
+   `PHARM TECH BASICS` captions section and `short - Pharm Tech Basics.mp4`). Comment-to-get links go to RN Basics' free pages until pharmtechbasics.com has its own.
 11. **MedLab Basics** (@medlabbasics, brand `lab`, added 2026-11-18): the same with
    `sh scripts/setup-secrets.sh lab` (`IG_USER_ID_LAB`, `IG_ACCESS_TOKEN_LAB`; the user ID 17841453290927626 is
    prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads a
-   `LAB BASICS` captions section and `short - MedLab Basics.mp4`). Comment-to-get links go to medlabbasics.com.
+   `MEDLAB BASICS` captions section and `short - MedLab Basics.mp4`). Comment-to-get links go to ICU and RN Basics' free pages until medlabbasics.com has its own.
 
 ## Every month
 
@@ -241,14 +241,18 @@ Setup, once per account:
 1. Instagram app → Settings → Messages and story replies → Message controls → Connected tools →
    **Allow access to messages** on.
 2. A token with `instagram_business_basic`, `instagram_business_manage_comments` and
-   `instagram_business_manage_messages`, stored with `sh scripts/setup-keychain.sh <icu|rn|medic>`.
+   `instagram_business_manage_messages`, stored with `sh scripts/setup-keychain.sh <icu|rn|medic>` (a Basics Posting
+   system-user token instead needs `instagram_basic`, `instagram_manage_comments` and `instagram_manage_messages`).
 3. `node scripts/comment-replies.mjs --check` (read-only), then have someone without a role on the Meta app
    comment a keyword, run `DRY_RUN=1 node scripts/comment-replies.mjs`, then `node scripts/comment-replies.mjs`.
 4. Install the launch agent (command in the plist), then add the "Comment X" line to queued captions:
    `node scripts/add-keyword-cta.mjs` (preview), `--apply`, commit, push. `--remove --apply` takes it out.
 
-Accounts with a system-user token (EAA..., graph.facebook.com: rt, er, ekg, np, pharm, lab) are skipped for now:
-with Facebook Login a private reply goes to the linked Facebook Page (`POST /{page-id}/messages`, a Page token,
-`pages_messaging`), which is not set up. `--check` still reads their Reels and comments.
+Accounts with a system-user token (EAA..., the Basics Posting app) use Meta's Unified Login on graph.facebook.com,
+which needs no Facebook Page: the same `POST /{ig-user-id}/messages` with `recipient.comment_id` for the DM and
+`POST /{comment-id}/replies` for the public answer. ekg, np, pharm and lab send since 2026-11-18 (`dms: true` in
+`ACCOUNTS`); rt and er only read (`--check`) until they get the same flag. ekg, np, pharm and lab have no pages on
+their own coming-soon sites yet, so their pages in `comment-keywords.json` are full URLs on icubasics.com or
+rnbasics.com, and the DM says so ("on ICU Basics' site, our sister app").
 
 Tests: `node --test scripts/comment-replies.test.mjs` (fake Instagram, no network).

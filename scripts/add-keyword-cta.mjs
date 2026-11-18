@@ -1,5 +1,6 @@
 // Adds the comment-to-get line ("💬 Comment SEPSIS and I'll DM you the free sepsis cheat sheet.") to the captions
-// of scheduled posts that have not gone out yet, using comment-keywords.json (slug → keyword → page per brand).
+// of scheduled posts that have not gone out yet, using comment-keywords.json (slug → keyword → page per brand; a page
+// may be a path on the brand's site or a full URL on a sister brand's site, either way the brand gets the line).
 // A brand without a page for that keyword gets no line. Turn this on only once scripts/comment-replies.mjs is
 // answering on that account, or people comment and get nothing.
 //
@@ -19,7 +20,8 @@ const apply = args.includes('--apply');
 const remove = args.includes('--remove');
 const tomorrow = new Date(Date.now() + 86400000).toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
 const from = opt('--from') ?? tomorrow;
-const brands = (opt('--brands') ?? 'icu,rn,medic').split(',');
+// The accounts comment-replies.mjs answers (ekg, np, pharm, lab since 2026-11-18; their pages are on sister sites)
+const brands = (opt('--brands') ?? 'icu,rn,medic,ekg,np,pharm,lab').split(',');
 const SLOTS = ['shorts', 'shorts-am', 'shorts-pm', 'features'];
 const MARK = '💬 Comment ';
 

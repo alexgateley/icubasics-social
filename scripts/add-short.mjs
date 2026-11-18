@@ -28,10 +28,15 @@ const text = fs.readFileSync(path.join(src, 'short - captions and tags.txt'), 'u
 const BRANDS = { rn: 'RN', icu: 'ICU', medic: 'MEDIC', rt: 'RT', er: 'ER', ekg: 'EKG', np: 'NP', pharm: 'PHARM', lab: 'LAB' };
 const NAMES = { rn: 'RN Basics', icu: 'ICU Basics', medic: 'Medic Basics', rt: 'RT Basics', er: 'ER Basics', ekg: 'EKG Tech Basics', np: 'NP Basics', pharm: 'Pharm Tech Basics', lab: 'MedLab Basics' };
 
+// The section headers as the video pipeline writes them ("════ EKG TECH BASICS ════"), plus the short forms
+const HEADERS = { ekg: ['EKG TECH', 'EKG'], pharm: ['PHARM TECH', 'PHARM'], lab: ['MEDLAB', 'LAB'] };
+
 /** The Instagram caption inside one brand's section of the captions file. */
 function caption(brand) {
-  const sections = text.split(/^═+ (RN|ICU|MEDIC|RT|ER|EKG|NP|PHARM|LAB) BASICS ═+$/m);
-  const i = sections.indexOf(BRANDS[brand]);
+  const sections = text.split(/^═+ ([A-Z][A-Z ]*?) BASICS ═+$/m);
+  const names = HEADERS[brand] ?? [BRANDS[brand]];
+  // Odd indexes are the captured header names, each followed by its section
+  const i = sections.findIndex((s, j) => j % 2 === 1 && names.includes(s));
   if (i < 0) return null;
   const lines = sections[i + 1].split('\n');
   const start = lines.findIndex((l) => l.startsWith('INSTAGRAM REELS'));

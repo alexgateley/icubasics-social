@@ -37,7 +37,7 @@ test('keywords: short comments match, sentences and unknown words do not', () =>
 
 test('every slug points at a keyword, and every keyword has at least one brand page', () => {
   for (const [slug, key] of Object.entries(config.slugs)) assert.ok(config.keywords[key], `${slug} → ${key}`);
-  for (const [key, def] of Object.entries(config.keywords)) assert.ok(def.icu || def.rn || def.medic, key);
+  for (const [key, def] of Object.entries(config.keywords)) assert.ok(Object.keys(config.brandNames).some((b) => def[b]), key);
 });
 
 test('message names the brand and the full link; no page means no message', () => {
@@ -114,4 +114,43 @@ test('a system-user account (EAA...) reads through graph.facebook.com and sends 
   assert.equal(check.status, 0, check.out);
   assert.ok(check.calls.includes('GET /v25.0/er-reel/comments [graph.facebook.com]'), check.calls.join('\n'));
   assert.equal(check.calls.filter((c) => c.startsWith('POST')).length, 0);
+});
+
+test('ekg, np, pharm, lab: pages are full URLs on a sister site, and the DM names that site', () => {
+  assert.equal(messageFor('EKG', 'ekg'), "Here's your free rhythm cheat sheet on ICU Basics' site, our sister app 👇\nhttps://icubasics.com/sheets/rhythm-gallery.html\n\nEducation only; follow your institution's protocols.");
+  assert.match(messageFor('PHARM', 'pharm'), /^Here's your free drug classes cheat sheet on RN Basics' site, our sister app 👇\nhttps:\/\/rnbasics\.com\/sheets\/pharm-classes-suffixes\.html\n/);
+  assert.match(messageFor('LABS', 'lab'), /on RN Basics' site.*\nhttps:\/\/rnbasics\.com\/sheets\/lab-values\.html/s);
+  assert.match(messageFor('DKA', 'np'), /on ICU Basics' site.*\nhttps:\/\/icubasics\.com\/sheets\/dka-hhs\.html/s);
+  assert.equal(messageFor('SEPSIS', 'ekg'), null);
+  assert.equal(messageFor('APP', 'lab'), null, 'no app link until the app is live');
+  assert.equal(matchKeyword('12 lead qtc'), 'QTC');
+  assert.equal(matchKeyword('high alert'), 'ALERT');
+  for (const b of ['ekg', 'np', 'pharm', 'lab']) {
+    const pages = Object.values(config.keywords).map((d) => d[b]).filter(Boolean);
+    assert.ok(pages.length >= 4, b);
+    for (const p of pages) assert.match(p, /^https:\/\/(icubasics|rnbasics|medicbasics)\.com\/\S+\.html$/, `${b} ${p}`);
+  }
+  // icu, rn and medic still use paths on their own sites
+  for (const def of Object.values(config.keywords)) for (const b of ['icu', 'rn', 'medic']) if (def[b]) assert.match(def[b], /^\//);
+});
+
+test('a system-user account with dms: true (ekg) sends the private and public reply on graph.facebook.com', () => {
+  const r = run({ ACCOUNTS: 'ekg' });
+  assert.equal(r.status, 0, r.out);
+  const dms = r.calls.filter((c) => c.startsWith('POST') && c.includes('/messages'));
+  assert.deepEqual(dms.map((c) => c.split(' ').slice(0, 3).join(' ')), ['POST /v25.0/17841458933751960/messages k1', 'POST /v25.0/17841458933751960/messages k2']);
+  assert.ok(dms.every((c) => c.endsWith('[graph.facebook.com]') && c.includes('https://icubasics.com/sheets/rhythm-gallery.html') && c.includes("ICU Basics' site")), dms.join('\n'));
+  const replies = r.calls.filter((c) => c.includes('/replies'));
+  assert.deepEqual(replies, ['POST /v25.0/k1/replies Sent you a DM 📩 [graph.facebook.com]', 'POST /v25.0/k2/replies Sent you a DM 📩 [graph.facebook.com]']);
+  assert.equal(r.state.replied.k3.status, 'no page for this brand');
+  assert.equal(r.state.replied.k4, undefined, 'its own comment is skipped');
+  assert.ok(!r.out.includes('EAAfake'), 'the token is never printed');
+  const again = run({ ACCOUNTS: 'ekg', DIR: r.dir });
+  assert.equal(again.calls.filter((c) => c.startsWith('POST')).length, 0);
+  const dry = run({ ACCOUNTS: 'ekg', DRY_RUN: '1' });
+  assert.equal(dry.calls.filter((c) => c.startsWith('POST')).length, 0);
+  assert.match(dry.out, /DRY RUN would DM EKG for comment k1/);
+  const check = run({ ACCOUNTS: 'ekg' }, ['--check']);
+  assert.equal(check.calls.filter((c) => c.startsWith('POST')).length, 0);
+  assert.match(check.out, /@ekgtechbasics: OK, 1 posts/);
 });
