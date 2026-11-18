@@ -7,6 +7,10 @@
 #   sh scripts/setup-secrets.sh medic  # @themedicbasics (IG_USER_ID_MEDIC, IG_ACCESS_TOKEN_MEDIC)
 #   sh scripts/setup-secrets.sh rt     # @respiratorytherapybasics (IG_USER_ID_RT, IG_ACCESS_TOKEN_RT)
 #   sh scripts/setup-secrets.sh er     # @theerbasics (IG_USER_ID_ER, IG_ACCESS_TOKEN_ER)
+#   sh scripts/setup-secrets.sh ekg    # @ekgtechbasics (IG_USER_ID_EKG, IG_ACCESS_TOKEN_EKG)
+#   sh scripts/setup-secrets.sh np     # @npbasics (IG_USER_ID_NP, IG_ACCESS_TOKEN_NP)
+#   sh scripts/setup-secrets.sh pharm  # @pharmtechbasics (IG_USER_ID_PHARM, IG_ACCESS_TOKEN_PHARM)
+#   sh scripts/setup-secrets.sh lab    # @medlabbasics (IG_USER_ID_LAB, IG_ACCESS_TOKEN_LAB)
 #
 # It prompts for the Instagram user ID and the access token (the token is not echoed), then
 # optionally for a fine-grained GitHub personal access token (GH_PAT, shared by both accounts)
@@ -19,8 +23,12 @@ case "$BRAND" in
   rn)  SUFFIX="_RN"; DEFAULT_ID="17841429422921068"; HANDLE="@rnbasicsnclex" ;;
   medic) SUFFIX="_MEDIC"; DEFAULT_ID=""; HANDLE="@themedicbasics" ;;
   rt) SUFFIX="_RT"; DEFAULT_ID="17841480403371899"; HANDLE="@respiratorytherapybasics" ;;
-  er) SUFFIX="_ER"; DEFAULT_ID=""; HANDLE="@theerbasics" ;;
-  *) echo "Unknown brand '$BRAND' (icu, rn, medic, rt or er)"; exit 1 ;;
+  er) SUFFIX="_ER"; DEFAULT_ID="17841479868648523"; HANDLE="@theerbasics" ;;
+  ekg) SUFFIX="_EKG"; DEFAULT_ID="17841458933751960"; HANDLE="@ekgtechbasics" ;;
+  np) SUFFIX="_NP"; DEFAULT_ID="17841445521547936"; HANDLE="@npbasics" ;;
+  pharm) SUFFIX="_PHARM"; DEFAULT_ID="17841455056336896"; HANDLE="@pharmtechbasics" ;;
+  lab) SUFFIX="_LAB"; DEFAULT_ID="17841453290927626"; HANDLE="@medlabbasics" ;;
+  *) echo "Unknown brand '$BRAND' (icu, rn, medic, rt, er, ekg, np, pharm or lab)"; exit 1 ;;
 esac
 echo "Storing credentials for $HANDLE"
 if [ -n "$DEFAULT_ID" ]; then
@@ -33,7 +41,10 @@ stty -echo; read -r IG_ACCESS_TOKEN; stty echo; printf '\n'
 [ -n "$IG_USER_ID" ] && [ -n "$IG_ACCESS_TOKEN" ] || { echo "Both values are required."; exit 1; }
 case "$IG_USER_ID" in *[!0-9]*) echo "The Instagram user ID is a number (it looks like a token was pasted there). Start over and press Enter to accept the default ID."; exit 1 ;; esac
 # Check the token works before storing it
-ME=$(curl -s "https://graph.instagram.com/v25.0/me?fields=user_id,username&access_token=$IG_ACCESS_TOKEN")
+case "$IG_ACCESS_TOKEN" in
+  EAA*) ME=$(curl -s "https://graph.facebook.com/v25.0/$IG_USER_ID?fields=id,username&access_token=$IG_ACCESS_TOKEN") ;;  # Basics Posting app (system-user token, never expires)
+  *) ME=$(curl -s "https://graph.instagram.com/v25.0/me?fields=user_id,username&access_token=$IG_ACCESS_TOKEN") ;;
+esac
 case "$ME" in
   *username*) echo "Token check: $ME" ;;
   *) echo "Token check failed: $ME"; exit 1 ;;

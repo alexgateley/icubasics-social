@@ -28,5 +28,21 @@
   "2026-11-27": "hf-digoxin-toxicity",
   "2026-11-28": "insulin-timing",
   "2026-11-29": "dka-potassium-before-insulin",
-  "2026-11-30": "dka-vs-hhs"
+  "2026-11-30": "dka-vs-hhs",
+  "2026-12-01": "ob-pph-hands-first",
+  "2026-12-02": "ekg-svt-sinus",
+  "2026-12-03": "ekg-heart-blocks",
+  "2026-12-04": "stroke-last-known-well",
+  "2026-12-05": "stroke-blood-pressure",
+  "2026-12-06": "dosage-pounds-kg",
+  "2026-12-07": "dosage-epi-strengths",
+  "2026-12-08": "dosage-pressor-drip",
+  "2026-12-09": "endocrine-diabetes-insipidus",
+  "2026-12-10": "endocrine-adrenal-crisis",
+  "2026-12-11": "cardiac-drugs-ace-cough-vs-angioedema",
+  "2026-12-12": "cardiac-drugs-hold-parameters",
+  "2026-12-13": "cardiac-drugs-calcium-channel-blockers",
+  "2026-12-14": "antidotes-flumazenil-seizures",
+  "2026-12-15": "antidotes-digoxin-fab-and-potassium",
+  "2026-12-16": "trauma-tension-pneumothorax"
 }

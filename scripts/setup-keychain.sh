@@ -9,11 +9,15 @@
 #   sh scripts/setup-keychain.sh medic      # @themedicbasics   (IG_USER_ID_MEDIC, IG_ACCESS_TOKEN_MEDIC)
 #   sh scripts/setup-keychain.sh rt         # @respiratorytherapybasics (IG_USER_ID_RT, IG_ACCESS_TOKEN_RT)
 #   sh scripts/setup-keychain.sh er         # @theerbasics (IG_USER_ID_ER, IG_ACCESS_TOKEN_ER)
+#   sh scripts/setup-keychain.sh ekg        # @ekgtechbasics (IG_USER_ID_EKG, IG_ACCESS_TOKEN_EKG)
+#   sh scripts/setup-keychain.sh np         # @npbasics (IG_USER_ID_NP, IG_ACCESS_TOKEN_NP)
+#   sh scripts/setup-keychain.sh pharm      # @pharmtechbasics (IG_USER_ID_PHARM, IG_ACCESS_TOKEN_PHARM)
+#   sh scripts/setup-keychain.sh lab        # @medlabbasics (IG_USER_ID_LAB, IG_ACCESS_TOKEN_LAB)
 #   sh scripts/setup-keychain.sh rhea       # @runonrhea        (IG_USER_ID_RHEA, IG_ACCESS_TOKEN_RHEA)
 #   sh scripts/setup-keychain.sh winery     # @thewinerybooks   (IG_USER_ID_WINERY, IG_ACCESS_TOKEN_WINERY)
 #   sh scripts/setup-keychain.sh franchifi  # @franchifi        (IG_USER_ID_FRANCHIFI, IG_ACCESS_TOKEN_FRANCHIFI)
 #   sh scripts/setup-keychain.sh gripwheels # @griptheorywheels (IG_USER_ID_GRIPWHEELS, IG_ACCESS_TOKEN_GRIPWHEELS)
-#   sh scripts/setup-keychain.sh all        # all nine in turn; an empty Enter at a token prompt skips that account
+#   sh scripts/setup-keychain.sh all        # all thirteen in turn; an empty Enter at a token prompt skips that account
 #
 # The user ID is filled in (press Enter to keep it), so only the token needs pasting (rt has no ID on
 # file yet: type the one shown next to the token in the Meta dashboard). The token can
@@ -24,7 +28,7 @@
 set -eu
 # KEYCHAIN_SERVICE exists only so tests can use throwaway items (as in keychain.mjs)
 SERVICE="${KEYCHAIN_SERVICE:-icubasics-social}"
-ALL="icu rn medic rt er rhea winery franchifi gripwheels"
+ALL="icu rn medic rt er ekg np pharm lab rhea winery franchifi gripwheels"
 
 # account -> keychain suffix, Instagram user ID (not secret; from the Meta dashboard), handle.
 # Keep in step with IG_ACCOUNTS in analytics.mjs.
@@ -34,7 +38,11 @@ info() {
     rn)         SUFFIX="_RN";         DEFAULT_ID="17841429422921068"; HANDLE="@rnbasicsnclex" ;;
     medic)      SUFFIX="_MEDIC";      DEFAULT_ID="17841420840594491"; HANDLE="@themedicbasics" ;;
     rt)         SUFFIX="_RT";         DEFAULT_ID="17841480403371899"; HANDLE="@respiratorytherapybasics" ;;
-    er)         SUFFIX="_ER";         DEFAULT_ID=""; HANDLE="@theerbasics" ;;
+    er)         SUFFIX="_ER";         DEFAULT_ID="17841479868648523"; HANDLE="@theerbasics" ;;
+    ekg)        SUFFIX="_EKG";        DEFAULT_ID="17841458933751960"; HANDLE="@ekgtechbasics" ;;
+    np)         SUFFIX="_NP";         DEFAULT_ID="17841445521547936"; HANDLE="@npbasics" ;;
+    pharm)      SUFFIX="_PHARM";      DEFAULT_ID="17841455056336896"; HANDLE="@pharmtechbasics" ;;
+    lab)        SUFFIX="_LAB";        DEFAULT_ID="17841453290927626"; HANDLE="@medlabbasics" ;;
     rhea)       SUFFIX="_RHEA";       DEFAULT_ID="17841426819974871"; HANDLE="@runonrhea" ;;
     winery)     SUFFIX="_WINERY";     DEFAULT_ID="17841433053134440"; HANDLE="@thewinerybooks" ;;
     franchifi)  SUFFIX="_FRANCHIFI";  DEFAULT_ID="17841451921105656"; HANDLE="@franchifi" ;;
@@ -103,7 +111,7 @@ setup_one() {
 ACCOUNT="${1:-icu}"
 if [ "$ACCOUNT" = posthog ]; then exec sh "$(dirname "$0")/setup-posthog.sh"; fi
 if [ "$ACCOUNT" = all ]; then
-  echo "Storing analytics credentials for all nine Instagram accounts. Press Enter at a token prompt to skip one."
+  echo "Storing analytics credentials for all thirteen Instagram accounts. Press Enter at a token prompt to skip one."
   STORED=""; SKIPPED=""; FAILED=""
   for a in $ALL; do
     rc=0; setup_one "$a" 1 || rc=$?

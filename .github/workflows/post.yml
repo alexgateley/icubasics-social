@@ -16,7 +16,7 @@ on:
       brand:
         description: 'Which account to post for'
         type: choice
-        options: [all, icu, rn, medic, rt, er]
+        options: [all, icu, rn, medic, rt, er, ekg, np, pharm, lab]
         default: all
       date:
         description: 'Post a specific date (YYYY-MM-DD) now, skipping the 7 AM check'
@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        brand: [icu, rn, medic, rt, er]
+        brand: [icu, rn, medic, rt, er, ekg, np, pharm, lab]
     # One job per account; the marker commit step below retries around the other job's push
     concurrency:
       group: post-${{ matrix.brand }}
@@ -61,7 +61,9 @@ jobs:
       # Each account has its own token and user id: IG_ACCESS_TOKEN / IG_USER_ID for @icubasics,
       # IG_ACCESS_TOKEN_RN / IG_USER_ID_RN for @rnbasicsnclex, IG_ACCESS_TOKEN_MEDIC / IG_USER_ID_MEDIC
       # for @themedicbasics, IG_ACCESS_TOKEN_RT / IG_USER_ID_RT for @respiratorytherapybasics, IG_ACCESS_TOKEN_ER / IG_USER_ID_ER
-      # for @theerbasics. A brand
+      # for @theerbasics, IG_ACCESS_TOKEN_EKG / IG_USER_ID_EKG for @ekgtechbasics, IG_ACCESS_TOKEN_NP / IG_USER_ID_NP
+      # for @npbasics, IG_ACCESS_TOKEN_PHARM / IG_USER_ID_PHARM for @pharmtechbasics, IG_ACCESS_TOKEN_LAB / IG_USER_ID_LAB
+      # for @medlabbasics. A brand
       # whose secrets are not set yet is skipped with a notice instead of failing the run.
       - name: Select the account's credentials
         id: creds
@@ -76,6 +78,14 @@ jobs:
           RT_USER: ${{ secrets.IG_USER_ID_RT }}
           ER_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_ER }}
           ER_USER: ${{ secrets.IG_USER_ID_ER }}
+          EKG_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_EKG }}
+          EKG_USER: ${{ secrets.IG_USER_ID_EKG }}
+          NP_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_NP }}
+          NP_USER: ${{ secrets.IG_USER_ID_NP }}
+          PHARM_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_PHARM }}
+          PHARM_USER: ${{ secrets.IG_USER_ID_PHARM }}
+          LAB_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_LAB }}
+          LAB_USER: ${{ secrets.IG_USER_ID_LAB }}
         run: |
           case "${{ matrix.brand }}" in
             icu) TOKEN="$ICU_TOKEN"; USER="$ICU_USER"; NAME=IG_ACCESS_TOKEN ;;
@@ -83,6 +93,10 @@ jobs:
             medic) TOKEN="$MEDIC_TOKEN"; USER="$MEDIC_USER"; NAME=IG_ACCESS_TOKEN_MEDIC ;;
             rt) TOKEN="$RT_TOKEN"; USER="$RT_USER"; NAME=IG_ACCESS_TOKEN_RT ;;
             er) TOKEN="$ER_TOKEN"; USER="$ER_USER"; NAME=IG_ACCESS_TOKEN_ER ;;
+            ekg) TOKEN="$EKG_TOKEN"; USER="$EKG_USER"; NAME=IG_ACCESS_TOKEN_EKG ;;
+            np) TOKEN="$NP_TOKEN"; USER="$NP_USER"; NAME=IG_ACCESS_TOKEN_NP ;;
+            pharm) TOKEN="$PHARM_TOKEN"; USER="$PHARM_USER"; NAME=IG_ACCESS_TOKEN_PHARM ;;
+            lab) TOKEN="$LAB_TOKEN"; USER="$LAB_USER"; NAME=IG_ACCESS_TOKEN_LAB ;;
           esac
           if [ -z "$TOKEN" ] || [ -z "$USER" ]; then
             echo "::notice::No credentials stored for ${{ matrix.brand }} yet (run scripts/setup-secrets.sh ${{ matrix.brand }}); skipping"
@@ -167,7 +181,7 @@ jobs:
   post-one:
     # Manual run for a single account
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.brand == 'icu' || inputs.brand == 'rn' || inputs.brand == 'medic' || inputs.brand == 'rt' || inputs.brand == 'er') }}
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.brand == 'icu' || inputs.brand == 'rn' || inputs.brand == 'medic' || inputs.brand == 'rt' || inputs.brand == 'er' || inputs.brand == 'ekg' || inputs.brand == 'np' || inputs.brand == 'pharm' || inputs.brand == 'lab') }}
     concurrency:
       group: post-${{ inputs.brand }}
       cancel-in-progress: false
@@ -193,6 +207,14 @@ jobs:
           RT_USER: ${{ secrets.IG_USER_ID_RT }}
           ER_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_ER }}
           ER_USER: ${{ secrets.IG_USER_ID_ER }}
+          EKG_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_EKG }}
+          EKG_USER: ${{ secrets.IG_USER_ID_EKG }}
+          NP_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_NP }}
+          NP_USER: ${{ secrets.IG_USER_ID_NP }}
+          PHARM_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_PHARM }}
+          PHARM_USER: ${{ secrets.IG_USER_ID_PHARM }}
+          LAB_TOKEN: ${{ secrets.IG_ACCESS_TOKEN_LAB }}
+          LAB_USER: ${{ secrets.IG_USER_ID_LAB }}
         run: |
           case "${{ inputs.brand }}" in
             icu) TOKEN="$ICU_TOKEN"; USER="$ICU_USER" ;;
@@ -200,6 +222,10 @@ jobs:
             medic) TOKEN="$MEDIC_TOKEN"; USER="$MEDIC_USER" ;;
             rt) TOKEN="$RT_TOKEN"; USER="$RT_USER" ;;
             er) TOKEN="$ER_TOKEN"; USER="$ER_USER" ;;
+            ekg) TOKEN="$EKG_TOKEN"; USER="$EKG_USER" ;;
+            np) TOKEN="$NP_TOKEN"; USER="$NP_USER" ;;
+            pharm) TOKEN="$PHARM_TOKEN"; USER="$PHARM_USER" ;;
+            lab) TOKEN="$LAB_TOKEN"; USER="$LAB_USER" ;;
           esac
           [ -n "$TOKEN" ] && [ -n "$USER" ] || { echo "::error::No credentials stored for ${{ inputs.brand }} (run scripts/setup-secrets.sh ${{ inputs.brand }})"; exit 1; }
           echo "::add-mask::$TOKEN"

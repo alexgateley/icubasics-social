@@ -76,7 +76,11 @@ const IG_ACCOUNTS = [
   { account: 'medic', label: '@themedicbasics', suffix: '_MEDIC', userId: '17841420840594491' },
   // No ID on file yet: setup-keychain.sh rt stores the one from the Meta dashboard
   { account: 'rt', label: '@respiratorytherapybasics', suffix: '_RT', userId: '17841480403371899' },
-  { account: 'er', label: '@theerbasics', suffix: '_ER', userId: '' },
+  { account: 'er', label: '@theerbasics', suffix: '_ER', userId: '17841479868648523' },
+  { account: 'ekg', label: '@ekgtechbasics', suffix: '_EKG', userId: '17841458933751960' },
+  { account: 'np', label: '@npbasics', suffix: '_NP', userId: '17841445521547936' },
+  { account: 'pharm', label: '@pharmtechbasics', suffix: '_PHARM', userId: '17841455056336896' },
+  { account: 'lab', label: '@medlabbasics', suffix: '_LAB', userId: '17841453290927626' },
   { account: 'rhea', label: '@runonrhea', suffix: '_RHEA', userId: '17841426819974871' },
   { account: 'winery', label: '@thewinerybooks', suffix: '_WINERY', userId: '17841433053134440' },
   { account: 'franchifi', label: '@franchifi', suffix: '_FRANCHIFI', userId: '17841451921105656' },
@@ -305,7 +309,7 @@ async function fetchYouTube(channel) {
 function markerIndex() {
   const git = (args, input) => execFileSync('git', ['-C', REPO_DIR, ...args], { encoding: 'utf8', input, maxBuffer: 64 << 20, stdio: ['pipe', 'pipe', 'ignore'] });
   try { git(['fetch', '-q', 'origin', 'main']); } catch { log('git fetch failed; using the last fetched origin/main'); }
-  const paths = git(['ls-tree', '-r', '--name-only', 'origin/main', '--', 'published', 'published-rn', 'published-medic', 'published-rt', 'published-er'])
+  const paths = git(['ls-tree', '-r', '--name-only', 'origin/main', '--', 'published', 'published-rn', 'published-medic', 'published-rt', 'published-er', 'published-ekg', 'published-np', 'published-pharm', 'published-lab'])
     .split('\n').filter((p) => p.endsWith('.json'));
   const out = Buffer.from(git(['cat-file', '--batch'], paths.map((p) => `origin/main:${p}`).join('\n') + '\n'), 'utf8');
   const index = {};
@@ -318,7 +322,7 @@ function markerIndex() {
     at = nl + 1 + size + 1;
     try {
       const m = JSON.parse(body);
-      const brand = p.startsWith('published-rn') ? 'rn' : p.startsWith('published-medic') ? 'medic' : p.startsWith('published-rt') ? 'rt' : p.startsWith('published-er') ? 'er' : 'icu';
+      const brand = p.startsWith('published-rn') ? 'rn' : p.startsWith('published-medic') ? 'medic' : p.startsWith('published-rt') ? 'rt' : p.startsWith('published-er') ? 'er' : p.startsWith('published-ekg') ? 'ekg' : p.startsWith('published-np') ? 'np' : p.startsWith('published-pharm') ? 'pharm' : p.startsWith('published-lab') ? 'lab' : 'icu';
       if (m.mediaId) index[m.mediaId] = { kind: m.kind, folder: m.folder, brand };
     } catch { /* not a marker */ }
   }
@@ -422,8 +426,8 @@ function writeFixtures() {
   const only = process.env.FIXTURE_ACCOUNTS?.split(',');
   const igFixture = IG_ACCOUNTS.filter((a) => !only || only.includes(a.account));
   const accounts = [...igFixture.map((a) => ({ platform: 'instagram', account: a.account })), { platform: 'youtube', account: 'yt' }];
-  const baseFollowers = { icu: 420, rn: 1350, medic: 260, rt: 30, er: 10, rhea: 610, winery: 180, franchifi: 95, gripwheels: 40, yt: 85 };
-  const growth = { icu: 6, rn: 14, medic: 4, rt: 1, er: 1, rhea: 5, winery: 2, franchifi: 1, gripwheels: 1, yt: 3 };
+  const baseFollowers = { icu: 420, rn: 1350, medic: 260, rt: 30, er: 10, ekg: 10, np: 10, pharm: 10, lab: 10, rhea: 610, winery: 180, franchifi: 95, gripwheels: 40, yt: 85 };
+  const growth = { icu: 6, rn: 14, medic: 4, rt: 1, er: 1, ekg: 1, np: 1, pharm: 1, lab: 1, rhea: 5, winery: 2, franchifi: 1, gripwheels: 1, yt: 3 };
   let seed = 7;
   const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
   const acc = [];

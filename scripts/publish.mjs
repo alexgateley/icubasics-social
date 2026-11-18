@@ -14,7 +14,7 @@
 // Environment:
 //   IG_ACCESS_TOKEN   long-lived token from the Meta app dashboard (Instagram API with Instagram Login)
 //   IG_USER_ID        the Instagram professional account id shown next to the token
-//   BRAND             icu (default, posts/ and published/), or rn, medic, rt, er (posts-<brand>/ and published-<brand>/)
+//   BRAND             icu (default, posts/ and published/), or rn, medic, rt, er, ekg, np, pharm, lab (posts-<brand>/ and published-<brand>/)
 //   PAGES_BASE_URL    where posts/ is served, e.g. https://alexgateley.github.io/icubasics-social
 //   POST_DATE         optional YYYY-MM-DD to post a specific day and skip the time-of-day check
 //   DRY_RUN           "true" to log what would be posted without calling the API
@@ -27,9 +27,13 @@ import path from 'node:path';
 
 const TZ = 'America/Chicago';
 const POST_HOUR = 7;
-const GRAPH = 'https://graph.instagram.com';
-
 const token = process.env.IG_ACCESS_TOKEN;
+// Two kinds of token: Instagram-login tokens (IGAA..., the ICU Basics app: icu, rn, medic) use
+// graph.instagram.com and expire after 60 days; Unified-login system-user tokens (EAA..., the Basics
+// Posting app from 2026-11-18: er, rt, ekg, np, pharm, lab) use graph.facebook.com and never expire.
+// The publishing calls (media, media_publish, status) are the same on both.
+const SYSTEM_USER = (token || '').startsWith('EAA');
+const GRAPH = SYSTEM_USER ? 'https://graph.facebook.com/v25.0' : 'https://graph.instagram.com';
 const userId = process.env.IG_USER_ID;
 const base = (process.env.PAGES_BASE_URL || '').replace(/\/$/, '');
 const forcedDate = process.env.POST_DATE || '';
@@ -46,8 +50,8 @@ const AFTERNOON_HOUR = 15;
 const featuresDir = `features/${brand}`;
 
 const fail = (msg) => { console.error(`ERROR: ${msg}`); process.exit(1); };
-// The Instagram accounts this job posts for (rt is @respiratorytherapybasics, added 2026-11-15; er is @theerbasics, added 2026-11-17)
-const BRANDS = ['icu', 'rn', 'medic', 'rt', 'er'];
+// The Instagram accounts this job posts for (rt is @respiratorytherapybasics, added 2026-11-15; er is @theerbasics, added 2026-11-17; ekg @ekgtechbasics, np @npbasics, pharm @pharmtechbasics, lab @medlabbasics, added 2026-11-18)
+const BRANDS = ['icu', 'rn', 'medic', 'rt', 'er', 'ekg', 'np', 'pharm', 'lab'];
 if (!BRANDS.includes(brand)) fail(`Unknown BRAND '${brand}' (one of ${BRANDS.join(', ')})`);
 // Instagram allows at most 5 hashtags per post (since Dec 2025); keep the first 5 if a caption has more
 const readCaption = (file) => {
@@ -79,6 +83,7 @@ const localParts = (date = new Date()) => {
 
 async function refreshToken() {
   if (!token) fail('IG_ACCESS_TOKEN is not set');
+  if (SYSTEM_USER) { console.log('System-user token: it never expires, nothing to refresh'); return; }
   const res = await fetch(`${GRAPH}/refresh_access_token?grant_type=ig_refresh_token&access_token=${token}`);
   const json = await res.json();
   if (!res.ok || json.error) {
@@ -94,7 +99,9 @@ async function refreshToken() {
 // Read-only: proves the token, the user id and the content-publishing permission all work
 async function checkAccess() {
   if (!token || !userId) fail('IG_ACCESS_TOKEN and IG_USER_ID must be set');
-  const me = await api('me', { fields: 'user_id,username' }, 'GET');
+  const me = SYSTEM_USER
+    ? await api(userId, { fields: 'id,username' }, 'GET').then((r) => ({ username: r.username, user_id: r.id }))
+    : await api('me', { fields: 'user_id,username' }, 'GET');
   const limit = await api(`${userId}/content_publishing_limit`, { fields: 'quota_usage,config' }, 'GET');
   const q = limit.data?.[0] ?? {};
   console.log(`Token OK for @${me.username} (${me.user_id}); posts used in the last 24 h: ${q.quota_usage ?? '?'} of ${q.config?.quota_total ?? '?'}`);
@@ -241,10 +248,16 @@ const SCHEDULED = {
   morning: { dir: 'shorts-am', hour: POST_HOUR, label: 'morning explainer short' },
 };
 
+// Evening slot (Fable posting-time review, Alex 2026-11-18): the new accounts post their evening Reel from 8 PM;
+// icu, rn and medic alternate 6 PM (even dates) and 8 PM (odd dates) for a few weeks to test which works better.
+const EVENING_TEST_BRANDS = ['icu', 'rn', 'medic'];
+const eveningHour = (date) => (EVENING_TEST_BRANDS.includes(brand) && Number(date.slice(8, 10)) % 2 === 0 ? FEATURE_HOUR : 20);
+
 async function publishScheduled(kindName) {
-  const { dir, hour, label } = SCHEDULED[kindName];
+  const { dir, label } = SCHEDULED[kindName];
   const now = localParts();
   const date = forcedDate || now.date;
+  const hour = kindName === 'feature' ? eveningHour(date) : SCHEDULED[kindName].hour;
   if (!forcedDate && !dryRun && now.hour < hour) {
     console.log(`It is ${now.hour}:00 in ${TZ}; ${label}s post from ${hour}:00. Nothing to do.`);
     return;

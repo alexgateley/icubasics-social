@@ -5,14 +5,22 @@
     "rn": "https://rnbasics.com",
     "medic": "https://medicbasics.com",
     "rt": "https://icubasics.com",
-    "er": "https://erbasics.com"
+    "er": "https://erbasics.com",
+    "ekg": "https://ekgtechbasics.com",
+    "np": "https://npbasics.com",
+    "pharm": "https://pharmtechbasics.com",
+    "lab": "https://medlabbasics.com"
   },
   "brandNames": {
     "icu": "ICU Basics",
     "rn": "RN Basics",
     "medic": "Medic Basics",
     "rt": "RT Basics",
-    "er": "ER Basics"
+    "er": "ER Basics",
+    "ekg": "EKG Tech Basics",
+    "np": "NP Basics",
+    "pharm": "Pharm Tech Basics",
+    "lab": "MedLab Basics"
   },
   "keywords": {
     "POTASSIUM": {

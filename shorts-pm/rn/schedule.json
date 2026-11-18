@@ -29,5 +29,17 @@
   "2026-12-01": "sb-pharm-12-amiodarone",
   "2026-12-02": "sb-pharm-13-atropine",
   "2026-12-03": "sb-pharm-14-diltiazem-amlodipine",
-  "2026-12-04": "sb-pharm-16-ssris"
+  "2026-12-04": "sb-pharm-16-ssris",
+  "2026-12-05": "iso-droplet-vs-contact",
+  "2026-12-06": "iso-cdiff-soap",
+  "2026-12-07": "psych-lithium-toxicity-ladder",
+  "2026-12-08": "psych-maois-aged-cheese",
+  "2026-12-09": "psych-serotonin-vs-nms",
+  "2026-12-10": "ob-severe-range-bp",
+  "2026-12-11": "ob-calcium-gluconate",
+  "2026-12-12": "ekg-vt-pulse",
+  "2026-12-13": "stroke-last-known-well",
+  "2026-12-14": "dosage-decimal",
+  "2026-12-15": "dosage-epi-strengths",
+  "2026-12-16": "endocrine-siadh"
 }

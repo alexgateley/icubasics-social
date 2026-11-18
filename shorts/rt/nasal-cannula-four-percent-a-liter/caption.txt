@@ -1,0 +1,5 @@
+🫁 NBRC practice: nasal cannula math
+Every liter on a nasal cannula adds about 4% oxygen.
+FiO₂ ≈ 20 + 4 × L/min: 1 L ≈ 24%, 6 L ≈ 44%. Past 6 L/min the cannula is maxed out, so step up the device.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#respiratorytherapist #respiratorytherapy #rtstudent #nbrc #oxygentherapy

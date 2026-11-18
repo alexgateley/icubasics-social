@@ -1,4 +1,4 @@
-// Comment-to-get for @icubasics, @rnbasicsnclex, @themedicbasics, @respiratorytherapybasics and @theerbasics. When someone comments a keyword from
+// Comment-to-get for @icubasics, @rnbasicsnclex, @themedicbasics, @respiratorytherapybasics, @theerbasics, @ekgtechbasics, @npbasics, @pharmtechbasics and @medlabbasics. When someone comments a keyword from
 // comment-keywords.json on a recent Reel ("SEPSIS"), this sends them one private reply (an Instagram DM tied to
 // that comment) with the matching free page on the brand's site, and answers the comment publicly ("Sent you a
 // DM 📩"). Runs ONLY on Alex's Mac (launchd/com.icubasics.comments.plist, every 10 minutes): tokens come from the
@@ -43,7 +43,11 @@ const ACCOUNTS = [
   { account: 'medic', suffix: '_MEDIC', userId: '17841420840594491', handle: 'themedicbasics' },
   // No ID on file yet: read from the keychain (setup-keychain.sh rt)
   { account: 'rt', suffix: '_RT', userId: '17841480403371899', handle: 'respiratorytherapybasics' },
-  { account: 'er', suffix: '_ER', userId: '', handle: 'theerbasics' },
+  { account: 'er', suffix: '_ER', userId: '17841479868648523', handle: 'theerbasics' },
+  { account: 'ekg', suffix: '_EKG', userId: '17841458933751960', handle: 'ekgtechbasics' },
+  { account: 'np', suffix: '_NP', userId: '17841445521547936', handle: 'npbasics' },
+  { account: 'pharm', suffix: '_PHARM', userId: '17841455056336896', handle: 'pharmtechbasics' },
+  { account: 'lab', suffix: '_LAB', userId: '17841453290927626', handle: 'medlabbasics' },
 ].filter((a) => !process.env.ACCOUNTS || process.env.ACCOUNTS.split(',').includes(a.account));
 
 const log = (msg) => console.log(`${new Date().toISOString()} ${msg}`);

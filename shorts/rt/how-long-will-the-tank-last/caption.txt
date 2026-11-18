@@ -1,0 +1,5 @@
+🫁 NBRC practice: how long will the tank last
+You're moving a patient on a portable tank. Will the oxygen last the trip?
+Minutes = gauge pressure × tank factor ÷ liter flow. E tank factor 0.28. Plan a reserve: about 30 extra minutes.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#respiratorytherapist #respiratorytherapy #rtstudent #nbrc #oxygen

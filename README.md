@@ -51,9 +51,25 @@ Generate RN Basics posts with `BRAND=rn scripts/social/push-month.sh <start> <da
    are added (`add-short.mjs` reads an `RT BASICS` captions section and `short - RT Basics.mp4`). Its
    comment-to-get pages stay empty until respiratorybasics.com is live.
 7. **ER Basics** (@theerbasics, brand `er`, added 2026-11-17): the same with
-   `sh scripts/setup-secrets.sh er` (`IG_USER_ID_ER`, `IG_ACCESS_TOKEN_ER`; the user ID is shown next to
-   the token in the Meta dashboard). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads an
+   `sh scripts/setup-secrets.sh er` (`IG_USER_ID_ER`, `IG_ACCESS_TOKEN_ER`; the user ID 17841479868648523 is
+   prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads an
    `ER BASICS` captions section and `short - ER Basics.mp4`).
+8. **EKG Tech Basics** (@ekgtechbasics, brand `ekg`, added 2026-11-18): the same with
+   `sh scripts/setup-secrets.sh ekg` (`IG_USER_ID_EKG`, `IG_ACCESS_TOKEN_EKG`; the user ID 17841458933751960 is
+   prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads an
+   `EKG BASICS` captions section and `short - EKG Tech Basics.mp4`). Comment-to-get links go to ekgtechbasics.com.
+9. **NP Basics** (@npbasics, brand `np`, added 2026-11-18): the same with
+   `sh scripts/setup-secrets.sh np` (`IG_USER_ID_NP`, `IG_ACCESS_TOKEN_NP`; the user ID 17841445521547936 is
+   prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads an
+   `NP BASICS` captions section and `short - NP Basics.mp4`). Comment-to-get links go to npbasics.com.
+10. **Pharm Tech Basics** (@pharmtechbasics, brand `pharm`, added 2026-11-18): the same with
+   `sh scripts/setup-secrets.sh pharm` (`IG_USER_ID_PHARM`, `IG_ACCESS_TOKEN_PHARM`; the user ID 17841455056336896 is
+   prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads a
+   `PHARM BASICS` captions section and `short - Pharm Tech Basics.mp4`). Comment-to-get links go to pharmtechbasics.com.
+11. **MedLab Basics** (@medlabbasics, brand `lab`, added 2026-11-18): the same with
+   `sh scripts/setup-secrets.sh lab` (`IG_USER_ID_LAB`, `IG_ACCESS_TOKEN_LAB`; the user ID 17841453290927626 is
+   prefilled). Its schedules start empty, so nothing posts until videos are added (`add-short.mjs` reads a
+   `LAB BASICS` captions section and `short - MedLab Basics.mp4`). Comment-to-get links go to medlabbasics.com.
 
 ## Every month
 
@@ -172,7 +188,7 @@ Instagram insights are private and this repository is public, so analytics never
 nothing is committed here. `scripts/analytics.mjs` runs nightly on Alex's Mac
 (`launchd/com.icubasics.analytics.plist`, 2:05 AM Pacific) with credentials from the login keychain
 (`scripts/setup-keychain.sh <account>` or `all` for Instagram, `scripts/setup-youtube.sh` for YouTube). It reads
-per-Reel insights for every Instagram account with a keychain token (icu, rn, medic, rt, er, rhea, winery,
+per-Reel insights for every Instagram account with a keychain token (icu, rn, medic, rt, er, ekg, np, pharm, lab, rhea, winery,
 franchifi, gripwheels; the others are skipped with a note) (views, reach, saved, shares, likes, comments,
 total_interactions, ig_reels_avg_watch_time, ig_reels_video_view_total_time), follower counts, and
 per-video YouTube Analytics (views, estimatedMinutesWatched, averageViewDuration, likes,
