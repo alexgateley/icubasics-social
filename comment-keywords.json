@@ -603,7 +603,9 @@
     "respiratory-drugs-epinephrine-first-in-anaphylaxis": "EPI",
     "clip-dka-glucose-before-acid": "DKA",
     "clip-dka-potassium-before-insulin": "DKA",
-    "clip-refeeding-syndrome": "POTASSIUM"
+    "clip-refeeding-syndrome": "POTASSIUM",
+    "critical-potassium": "POTASSIUM",
+    "clip-why-warfarin-needs-a-bridge": "HEPARIN"
   },
   "_rtNote": "rt points to icubasics.com until respiratorybasics.com and the RT app are live (Alex 2026-11-15)",
   "_sisterSitesNote": "ekg, np, pharm and lab point to free pages on icubasics.com and rnbasics.com while ekgtechbasics.com, npbasics.com, pharmtechbasics.com and medlabbasics.com are coming-soon pages (2026-11-18); move them to their own sites' paths once those have pages. QTC, PACING, COAG, TRANSFUSION and ALERT were added for them and have no icu/rn/medic page.",
