@@ -1,0 +1,6 @@
+🚑 CEN practice: MAP 65 in septic shock
+MAP = mean arterial pressure, the pressure driving blood into organs. Estimate it: DBP + ⅓ pulse pressure, so 90/50 ≈ 63.
+Surviving Sepsis: initial MAP target 65 in septic shock on vasopressors. Aiming for 80–85 (SEPSISPAM) didn't lower deaths.
+65 is a start: also check lactate, urine output, mentation and cap refill.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#ernurse #cen #emergencynursing #ernursing #nursingstudent

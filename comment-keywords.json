@@ -594,7 +594,9 @@
     "how-heparin-and-warfarin-work": "HEPARIN",
     "diltiazem-vs-amlodipine": "PHARM",
     "how-digoxin-works": "DIGOXIN",
-    "pairs-anion-gap-vs-non-gap-acidosis": "ABG"
+    "pairs-anion-gap-vs-non-gap-acidosis": "ABG",
+    "map-65": "SEPSIS",
+    "clip-hit-heparin-clots": "HEPARIN"
   },
   "_rtNote": "rt points to icubasics.com until respiratorybasics.com and the RT app are live (Alex 2026-11-15)",
   "_sisterSitesNote": "ekg, np, pharm and lab point to free pages on icubasics.com and rnbasics.com while ekgtechbasics.com, npbasics.com, pharmtechbasics.com and medlabbasics.com are coming-soon pages (2026-11-18); move them to their own sites' paths once those have pages. QTC, PACING, COAG, TRANSFUSION and ALERT were added for them and have no icu/rn/medic page.",
