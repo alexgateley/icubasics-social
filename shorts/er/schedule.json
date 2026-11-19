@@ -12,5 +12,8 @@
   "2026-11-30": "clip-dka-glucose-before-acid",
   "2026-12-01": "clip-dka-potassium-before-insulin",
   "2026-12-02": "troponin-timing",
-  "2026-12-03": "critical-potassium"
+  "2026-12-03": "critical-potassium",
+  "2026-12-04": "stemi-contiguous-leads",
+  "2026-12-05": "p-for-every-qrs",
+  "2026-12-06": "stemi-inferior-mi-and-nitro-storybook"
 }
