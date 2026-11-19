@@ -12,17 +12,5 @@
   "2026-11-15": "ekg-p-wave",
   "2026-11-16": "ekg-afib-flutter",
   "2026-11-17": "iso-airborne-precautions",
-  "2026-11-18": "resp-steroids-take-hours",
-  "2026-11-19": "abx-trough-before-dose",
-  "2026-11-20": "iso-droplet-vs-contact",
-  "2026-11-21": "abx-aminoglycosides",
-  "2026-11-22": "iso-cdiff-soap",
-  "2026-11-23": "abx-pcn-allergy-cephalosporins",
-  "2026-11-24": "psych-lithium-toxicity-ladder",
-  "2026-11-25": "psych-low-salt-lithium",
-  "2026-11-26": "psych-maois-aged-cheese",
-  "2026-11-27": "psych-atypicals-nms",
-  "2026-11-28": "psych-serotonin-vs-nms",
-  "2026-11-29": "ob-magnesium-toxicity",
-  "2026-11-30": "ob-severe-range-bp"
+  "2026-11-18": "resp-steroids-take-hours"
 }
