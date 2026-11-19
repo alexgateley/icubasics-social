@@ -1,0 +1,5 @@
+🫁 NBRC practice: pulse ox stuck at 85
+The pulse ox reads 85. You turn the oxygen up. It still reads 85.
+SpO2 stuck near 85% with a high PaO2 = think methemoglobin. Ask for co-oximetry. Antidote: methylene blue.
+By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
+#respiratorytherapist #respiratorytherapy #rtstudent #nbrc #abg
