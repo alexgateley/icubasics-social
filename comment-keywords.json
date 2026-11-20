@@ -611,7 +611,14 @@
     "p-for-every-qrs": "EKG",
     "stemi-reciprocal-changes": "STEMI",
     "stemi-inferior-mi-and-nitro-storybook": "STEMI",
-    "stemi-lbbb-and-sgarbossa-storybook": "STEMI"
+    "stemi-lbbb-and-sgarbossa-storybook": "STEMI",
+    "blood-bank-type-and-screen-vs-crossmatch": "TRANSFUSION",
+    "hematology-folate-can-hide-b12": "LABS",
+    "coag-dic-clotting-then-bleeding": "COAG",
+    "chemistry-trimethoprim-creatinine-bump": "LABS",
+    "blood-bank-o-for-red-cells-ab-for-plasma": "TRANSFUSION",
+    "chemistry-tumor-lysis-three-up-one-down": "LABS",
+    "blood-bank-citrate-and-calcium-in-massive-transfusion": "TRANSFUSION"
   },
   "_rtNote": "rt points to icubasics.com until respiratorybasics.com and the RT app are live (Alex 2026-11-15)",
   "_sisterSitesNote": "ekg, np, pharm and lab point to free pages on icubasics.com and rnbasics.com while ekgtechbasics.com, npbasics.com, pharmtechbasics.com and medlabbasics.com are coming-soon pages (2026-11-18); move them to their own sites' paths once those have pages. QTC, PACING, COAG, TRANSFUSION and ALERT were added for them and have no icu/rn/medic page.",
