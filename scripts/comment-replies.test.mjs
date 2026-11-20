@@ -156,3 +156,15 @@ test('a system-user account with dms: true (ekg) sends the private and public re
   assert.equal(check.calls.filter((c) => c.startsWith('POST')).length, 0);
   assert.match(check.out, /@ekgtechbasics: OK, 1 posts/);
 });
+
+test('a system-user account refused with "invalid for a private reply" counts no try and keeps the comment waiting', () => {
+  const a = run({ ACCOUNTS: 'ekg', FAKE_FAIL_MESSAGES: 'private' }); // ekg's fake Reel has keyword comments (er's APP has no ER page)
+  assert.equal(a.status, 0, a.out);
+  assert.equal(a.calls.filter((c) => c.includes('/messages')).length, 1, 'stops the account after the first refusal');
+  assert.match(a.out, /will not take private replies from this token/);
+  let state = a.state;
+  for (let i = 0; i < 3; i++) state = run({ ACCOUNTS: 'ekg', FAKE_FAIL_MESSAGES: 'private', DIR: a.dir }).state;
+  assert.deepEqual(state.replied, {}, 'never given up');
+  assert.deepEqual(state.tries ?? {}, {}, 'no tries counted');
+  assert.ok(!a.calls.some((c) => c.includes('/replies')), 'no public "Sent you a DM" without a DM');
+});

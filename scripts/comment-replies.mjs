@@ -188,6 +188,14 @@ async function runAccount(acct, state, budget) {
         sent++;
         log(`@${acct.handle}: sent ${keyword} for comment ${c.id}`);
       } catch (e) {
+        // A system-user (EAA) token refused this way every time (rt, 2026-11-19, every comment): on graph.facebook.com a
+        // private reply goes out from the Instagram account's linked Facebook Page with a Page access token, and the
+        // Basics Posting system user has no Page assigned. That is setup, not the comment, so no try is counted: the
+        // comment waits (up to Instagram's 7 days) until the account can send, instead of being given up after three runs.
+        if (isSystemUser(token) && /invalid for a private reply/i.test(e.message)) {
+          log(`@${acct.handle}: Instagram will not take private replies from this token (${scrub(e.message)}); nothing counted as a try. Keyword comments wait until the account is set up for DMs (linked Facebook Page assigned to the system user, or an Instagram-login token)`);
+          return sent;
+        }
         state.tries ??= {};
         const tries = (state.tries[c.id] ?? 0) + 1;
         state.tries[c.id] = tries;

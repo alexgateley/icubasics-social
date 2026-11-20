@@ -52,6 +52,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (edge === 'media') return json({ data: media[id] ?? [] });
   if (edge === 'comments') return json({ data: comments[id] ?? [] });
   if (edge === 'messages') {
+    if (failMessages === 'private') return json({ error: { message: 'The comment is invalid for a private reply', type: 'OAuthException', code: 100 } }, 400);
     if (failMessages) return json({ error: { message: 'Application does not have permission for this action', code: Number(failMessages) } }, 400);
     return json({ recipient_id: 'r', message_id: 'm' });
   }
