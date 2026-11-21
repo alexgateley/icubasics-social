@@ -28,6 +28,12 @@ function answer(name) {
     for (const [e, c] of [['question_answered', 13872], ['answer_rated', 3744], ['app_opened', 1241], ['quiz_completed', 678], ['onboarding_completed', 147], ['$pageview', 900]]) rows.push([e, e === '$pageview' ? 'site' : 'ios', c]);
     return { columns: ['event', 'platform', 'n'], results: rows };
   }
+  // A newer site with only a links page (no basics-site snippet), as respiratorybasics.com on 2026-11-20
+  if (name === 'sites') for (let n = 2; n >= 0; n--) {
+    rows.push([day(n), 'respiratorybasics.com', 'rt', '$pageview', 'links', 'instagram', 4]);
+    rows.push([day(n), 'respiratorybasics.com', 'rt', 'links_click', 'play', 'instagram', 2]);
+    rows.push([day(n), 'respiratorybasics.com', 'rt', 'links_click', 'website', 'instagram', 1]);
+  }
   for (let n = 89; n >= 0; n--) {
     const d = day(n);
     const grow = 0.3 + (89 - n) / 89;
@@ -40,6 +46,8 @@ function answer(name) {
         }
         rows.push([d, SITES[b], b, 'site_outbound_click', 'app_store', 'internal', Math.round(base * 0.08)]);
         rows.push([d, SITES[b], b, 'site_outbound_click', 'app', 'internal', Math.round(base * 0.05)]);
+        // a links page (basics-links) on the old sites too
+        if (n < 3) { rows.push([d, SITES[b], b, '$pageview', 'links', 'instagram', 2]); rows.push([d, SITES[b], b, 'links_click', 'family_rt', 'instagram', 1]); }
         continue;
       }
       for (const [p, pw] of Object.entries(PLATFORMS)) {

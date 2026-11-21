@@ -1,4 +1,4 @@
-// PostHog numbers for the three Basics apps and their websites, for the Basics Social app's "App usage" tab.
+// PostHog numbers for the three Basics apps and the Basics websites (all nine), for the Basics Social app's "App usage" tab.
 // Runs ONLY on Alex's Mac, and only when Alex clicks Refresh in the Basics Social app (usage is metered; never nightly):
 // this repository is public, so nothing here writes into it. Every call is a read (HogQL query API) with a
 // read-only personal API key from the login keychain (service icubasics-social, items POSTHOG_PERSONAL_API_KEY
@@ -28,6 +28,11 @@
 //   the site snippet must send it as a property, which it does not yet as of 2026-11-15), else $referring_domain
 //   ($direct when there is none). The id is random per page view,
 //   so a "visit" here is a page view that came from outside the site (a landing), not a unique visitor.
+//   Links pages (<site>/links/, the Instagram bio link, on all nine Basics sites since 2026-11-18): $pageview and
+//   links_click (link: app_store, play, website, family_<brand>, ...) with $lib basics-links, brand and site. They are
+//   the only tracking on respiratorybasics.com, erbasics.com, ekgtechbasics.com, npbasics.com, pharmtechbasics.com
+//   and medlabbasics.com, which have no basics-site snippet yet (checked 2026-11-20). A links page view counts as a
+//   page view (linksViews says how many were); its store buttons count as storeClicks, the others as linkClicks.
 //
 // Store (ANALYTICS_DIR, default ~/basics-growth-work/analytics/):
 //   posthog.jsonl        one line per day per app (kind "app": brand, platform; dau, wau, firstSeen = new users,
@@ -108,10 +113,13 @@ export const queries = (days) => {
         if(properties.$os = 'Android', 'android', 'ios') AS platform, count() AS installs
       FROM events WHERE ${since} AND event = 'Application Installed'
       GROUP BY day, brand, platform HAVING day >= toDate('${from}') AND brand != '' ORDER BY day LIMIT 50000`,
+    // kind: site_outbound_click's kind; links_click's link (app_store, play, website, family_<brand>, ...); 'links' for a
+    // page view of a /links page (basics-links), so those can be told apart from the rest of the site
     sites: `SELECT day, site, brand, event, kind, source, count() AS n FROM (
-        SELECT ${DAY} AS day, properties.site AS site, properties.brand AS brand, event, coalesce(properties.kind, '') AS kind,
+        SELECT ${DAY} AS day, properties.site AS site, properties.brand AS brand, event,
+          if(event = '$pageview', if(properties.$lib = 'basics-links', 'links', ''), coalesce(nullIf(properties.kind, ''), properties.link, '')) AS kind,
           ${SITE_SOURCE_INPUT} AS r, ${SOURCE} AS source
-        FROM events WHERE ${since} AND properties.$lib = 'basics-site' AND event IN ('$pageview', 'site_outbound_click'))
+        FROM events WHERE ${since} AND properties.$lib IN ('basics-site', 'basics-links') AND event IN ('$pageview', 'site_outbound_click', 'links_click'))
       WHERE day >= toDate('${from}') GROUP BY day, site, brand, event, kind, source ORDER BY day LIMIT 50000`,
     // Today, yesterday and the day before, each counted only up to the current time of day (Chicago), so today so far
     // can be compared with yesterday at the same hour
@@ -161,14 +169,17 @@ export function toLines({ daily, weekly, newUsers, installs, sites }) {
   for (const r of sites) {
     const date = String(r.day).slice(0, 10);
     const k = `${date}|${r.site}`;
-    if (!siteMap.has(k)) siteMap.set(k, { date, kind: 'site', site: r.site, brand: r.brand, pageviews: 0, landings: 0, instagram: 0, tiktok: 0, youtube: 0, search: 0, direct: 0, other: 0, storeClicks: 0, appClicks: 0 });
+    if (!siteMap.has(k)) siteMap.set(k, { date, kind: 'site', site: r.site, brand: r.brand, pageviews: 0, landings: 0, instagram: 0, tiktok: 0, youtube: 0, search: 0, direct: 0, other: 0, storeClicks: 0, appClicks: 0, linksViews: 0, linkClicks: 0 });
     const s = siteMap.get(k);
     const n = num(r.n);
     if (r.event === '$pageview') {
       s.pageviews += n;
+      if (r.kind === 'links') s.linksViews += n;
       if (r.source !== 'internal') { s.landings += n; s[r.source] = (s[r.source] ?? 0) + n; }
     } else if (r.kind === 'app') s.appClicks += n;
     else if (r.kind === 'app_store' || r.kind === 'play') s.storeClicks += n;
+    // the rest of a /links page's buttons: the brand's site (website), a sister app's links (family_<brand>), ...
+    else if (r.event === 'links_click') s.linkClicks += n;
   }
   return [...apps.values(), ...siteMap.values()];
 }

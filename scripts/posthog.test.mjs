@@ -27,3 +27,18 @@ test('a fetch with the fake API still writes site lines', () => {
   const lines = fs.readFileSync(path.join(dir, 'posthog.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
   assert.ok(lines.some((l) => l.kind === 'site' && l.instagram > 0));
 });
+
+test('links pages (basics-links) count: views, store buttons and other buttons, and a links-only site gets its own lines', () => {
+  const sites = queries(14).sites;
+  assert.match(sites, /properties\.\$lib IN \('basics-site', 'basics-links'\)/);
+  assert.match(sites, /'links_click'/);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'posthog-test-'));
+  const r = spawnSync(process.execPath, ['--import', path.join(here, 'posthog-fake-api.mjs'), path.join(here, 'posthog.mjs')], { encoding: 'utf8', timeout: 30000, env: { ...process.env, ANALYTICS_DIR: dir } });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const lines = fs.readFileSync(path.join(dir, 'posthog.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const rt = lines.filter((l) => l.kind === 'site' && l.site === 'respiratorybasics.com');
+  assert.equal(rt.length, 3);
+  for (const l of rt) assert.deepEqual([l.brand, l.pageviews, l.linksViews, l.landings, l.instagram, l.storeClicks, l.linkClicks], ['rt', 4, 4, 4, 4, 2, 1]);
+  const rn = lines.filter((l) => l.kind === 'site' && l.site === 'rnbasics.com' && l.linksViews > 0);
+  assert.ok(rn.length > 0 && rn.every((l) => l.linkClicks === 1 && l.pageviews > l.linksViews), 'links pages add to the old sites');
+});
