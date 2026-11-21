@@ -64,7 +64,9 @@ const addDays = (d, n) => new Date(Date.parse(`${d}T12:00:00Z`) + n * 86400000).
 /** Seconds since midnight in Chicago, now */
 const secondsNow = () => { const [h, m, sec] = new Intl.DateTimeFormat('en-GB', { timeZone: TZ, hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(new Date()).split(':').map(Number); return h * 3600 + m * 60 + sec; };
 const DAY = `toDate(toTimeZone(timestamp, '${TZ}'))`;
-const APP = `properties.brand IN ('icu', 'rn', 'medic', 'er', 'rt', 'ekg', 'np', 'pharm', 'lab') AND properties.platform IN ('ios', 'android', 'web') AND event NOT LIKE '$%'`;
+// Google Play's pre-launch test devices install every upload (about 5 per app); they are not people
+const NOT_ROBOT = `coalesce(properties.$device_name, '') NOT IN ('OnePlus8Pro', 'sdk_gphone_arm64')`;
+const APP = `properties.brand IN ('icu', 'rn', 'medic', 'er', 'rt', 'ekg', 'np', 'pharm', 'lab') AND properties.platform IN ('ios', 'android', 'web') AND event NOT LIKE '$%' AND ${NOT_ROBOT}`;
 // Referrer → source. Android apps arrive as android-app://<package> (TikTok's is com.zhiliaoapp.musically).
 // A tagged link's utm_source ("instagram", "tiktok", "youtube") wins over the referrer, which in-app browsers often leave out.
 export const SITE_SOURCE_INPUT = `lower(coalesce(nullIf(properties.utm_source, ''), properties.$referring_domain, ''))`;
@@ -111,7 +113,7 @@ export const queries = (days) => {
     installs: `SELECT ${DAY} AS day,
         multiIf(properties.$app_namespace LIKE '%icubasics%', 'icu', properties.$app_namespace LIKE '%rnbasics%', 'rn', properties.$app_namespace LIKE '%medicbasics%', 'medic', properties.$app_namespace LIKE '%erbasics%', 'er', properties.$app_namespace LIKE '%respiratorybasics%', 'rt', properties.$app_namespace LIKE '%ekgtechbasics%', 'ekg', properties.$app_namespace LIKE '%npbasics%', 'np', properties.$app_namespace LIKE '%pharmtechbasics%', 'pharm', properties.$app_namespace LIKE '%medlabbasics%', 'lab', '') AS brand,
         if(properties.$os = 'Android', 'android', 'ios') AS platform, count() AS installs
-      FROM events WHERE ${since} AND event = 'Application Installed'
+      FROM events WHERE ${since} AND event = 'Application Installed' AND ${NOT_ROBOT}
       GROUP BY day, brand, platform HAVING day >= toDate('${from}') AND brand != '' ORDER BY day LIMIT 50000`,
     // kind: site_outbound_click's kind; links_click's link (app_store, play, website, family_<brand>, ...); 'links' for a
     // page view of a /links page (basics-links), so those can be told apart from the rest of the site
