@@ -622,5 +622,11 @@
   },
   "_rtNote": "rt points to icubasics.com until respiratorybasics.com and the RT app are live (Alex 2026-11-15)",
   "_sisterSitesNote": "ekg, np, pharm and lab point to free pages on icubasics.com and rnbasics.com while ekgtechbasics.com, npbasics.com, pharmtechbasics.com and medlabbasics.com are coming-soon pages (2026-11-18); move them to their own sites' paths once those have pages. QTC, PACING, COAG, TRANSFUSION and ALERT were added for them and have no icu/rn/medic page.",
-  "_erRtNote": "er and rt point to free pages on icubasics.com/rnbasics.com/medicbasics.com (2026-11-18) until erbasics.com and respiratorybasics.com have pages."
+  "_erRtNote": "er and rt point to free pages on icubasics.com/rnbasics.com/medicbasics.com (2026-11-18) until erbasics.com and respiratorybasics.com have pages.",
+  "_aboutMessages": "messages.<brand>.<KEYWORD>: the whole DM for that brand and keyword, used instead of the page line. rt APP (Alex 2026-11-20): someone asking for the app wants the RT Basics app: Google Play, the website, coming soon to the App Store, available now inside ICU Basics on iPhone. Keep in step with RT_APP_REPLY in basics-social-app helper/collect.mjs.",
+  "messages": {
+    "rt": {
+      "APP": "Here's RT Basics 👇\nGoogle Play: https://play.google.com/store/apps/details?id=com.alex.respiratorybasics\nWebsite: https://respiratorybasics.com\n\nIt's coming soon to the App Store. On iPhone, the same NBRC practice is available now inside the ICU Basics app: https://apps.apple.com/app/id6809866200"
+    }
+  }
 }

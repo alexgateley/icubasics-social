@@ -60,11 +60,18 @@ test('APP / LINK / FREE send the site home (the store buttons) with a natural li
 test('rt: respiratorybasics.com has no pages yet, so DMs name ICU Basics as the sister site (APP too)', () => {
   assert.equal(config.sites.rt, 'https://respiratorybasics.com');
   assert.equal(config.brandNames.rt, 'RT Basics');
-  assert.match(messageFor('APP', 'rt'), /on ICU Basics' site.*\nhttps:\/\/icubasics\.com\//s);
+  // APP on rt: the RT Basics app itself (Alex 2026-11-20), not the sister site
+  const app = messageFor('APP', 'rt');
+  assert.match(app, /https:\/\/play\.google\.com\/store\/apps\/details\?id=com\.alex\.respiratorybasics/);
+  assert.match(app, /https:\/\/respiratorybasics\.com/);
+  assert.match(app, /coming soon to the App Store/);
+  assert.match(app, /inside the ICU Basics app: https:\/\/apps\.apple\.com\/app\/id6809866200$/);
+  assert.equal(messageFor('LINK', 'rt'), null, 'aliases map to APP before messageFor; LINK itself is no keyword');
+  assert.equal(messageFor(matchKeyword('link please'), 'rt'), app);
   assert.match(messageFor('POTASSIUM', 'rt'), /on ICU Basics' site.*\nhttps:\/\/icubasics\.com\/sheets\/electrolytes\.html/s);
   for (const key of Object.keys(config.keywords)) {
     const m = messageFor(key, 'rt');
-    if (m) assert.ok(!m.includes('respiratorybasics.com'), key);
+    if (m && key !== 'APP') assert.ok(!m.includes('respiratorybasics.com'), key);
   }
 });
 

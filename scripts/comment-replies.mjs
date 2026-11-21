@@ -105,6 +105,9 @@ const siteBrand = (url, config) => Object.keys(config.sites).find((b) => new URL
  * own site ("/sheets/x.html") or a full URL on a sister brand's site ("https://icubasics.com/sheets/x.html"), which the
  * DM names honestly ("on ICU Basics' site, our sister app"). */
 export function messageFor(key, brand, config = CONFIG) {
+  // A whole message set for this brand and keyword (comment-keywords.json messages), e.g. rt APP
+  const custom = config.messages?.[brand]?.[key];
+  if (custom) return custom;
   const def = config.keywords[key];
   const page = def?.[brand];
   if (!page) return null;
