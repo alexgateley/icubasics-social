@@ -92,7 +92,7 @@ const IG_ACCOUNTS = [
   // { account: 'np', label: '@npbasics', suffix: '_NP', userId: '17841445521547936' }, // off 2026-11-22: account not working (Alex)
   // { account: 'pharm', label: '@pharmtechbasics', suffix: '_PHARM', userId: '17841455056336896' }, // off 2026-11-22: account not working (Alex)
   { account: 'lab', label: '@medlabbasics', suffix: '_LAB', userId: '17841453290927626' },
-  { account: 'rhea', label: '@runonrhea', suffix: '_RHEA', userId: '17841426819974871' },
+  // { account: 'rhea', label: '@runonrhea', suffix: '_RHEA', userId: '17841426819974871' }, // off 2026-11-22: login refused, may be blocked (Alex)
   { account: 'winery', label: '@thewinerybooks', suffix: '_WINERY', userId: '17841433053134440' },
   { account: 'franchifi', label: '@franchifi', suffix: '_FRANCHIFI', userId: '17841451921105656' },
   { account: 'gripwheels', label: '@griptheorywheels', suffix: '_GRIPWHEELS', userId: '17841425472380435' },

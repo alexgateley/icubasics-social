@@ -100,7 +100,7 @@ test('INSIGHTS_DAYS=7: paging stops at the cutoff, and older Reels keep their li
   const dir = seed();
   const r = run(dir, ['fetch', '--only', 'instagram'], { INSIGHTS_DAYS: '7' });
   assert.equal(r.status, 0, r.out);
-  const perAccount = instagram(r.calls).filter((c) => c.endsWith('/media')).length / 10; // 10 accounts since ekg, np, pharm went off (2026-11-22)
+  const perAccount = instagram(r.calls).filter((c) => c.endsWith('/media')).length / 9; // 10 accounts since ekg, np, pharm went off (2026-11-22)
   assert.equal(perAccount, 1, 'one media page per account');
   const rows = readLines(dir, 'media.jsonl');
   assert.deepEqual(rows.filter((x) => x.id === 'reel-30' && x.account === 'icu').map((x) => x.views), [3000]);
@@ -157,6 +157,6 @@ test('a token without the insights permission costs one insights call per Reel, 
   const r = run(dir, ['fetch', '--only', 'instagram'], { INSIGHTS_DAYS: '7', FAKE_NO_INSIGHTS_PERMISSION: '1' });
   assert.equal(r.status, 0, r.out);
   const reels = r.calls.filter((c) => /\/(\d+-)?reel-\d+\/insights$/.test(c)).length;
-  assert.equal(reels, 10 * 7, 'seven Reels in the last 7 days per account, one call each');
+  assert.equal(reels, 9 * 7, 'seven Reels in the last 7 days per account, one call each');
   assert.match(r.out, /does not have permission/);
 });
