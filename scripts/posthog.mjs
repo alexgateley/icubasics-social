@@ -40,7 +40,9 @@
 //                        refetched day replaces its lines
 //   posthog-state.json   no secrets: when and how the last fetch went, the window, the events seen in the
 //                        last 30 days with their counts (n = 30 days, n7 = 7 days, n1 = 24 hours), screens (tab_opened
-//                        by tab, same counts; for the PostHog tab's top screens), and sameHour (today, yesterday and the day before, each up to
+//                        by tab, same counts; for the PostHog tab's top screens), usage (each usage event by app,
+//                        platform and detail: quiz mode, arcade game, Reference page, sheet; with prior-7-day counts,
+//                        devices and the average score), and sameHour (today, yesterday and the day before, each up to
 //                        the time of the fetch, for "today so far vs yesterday at this hour")
 import fs from 'node:fs';
 import os from 'node:os';
@@ -80,6 +82,18 @@ export const SOURCE = `multiIf(
   r LIKE '%google%' OR r LIKE '%bing.%' OR r LIKE '%duckduckgo%' OR r LIKE '%yahoo%' OR r LIKE '%ecosia%' OR r LIKE '%search.brave%' OR r LIKE '%yandex%' OR r LIKE '%baidu%', 'search',
   'other')`;
 
+// What an event is about, for the usage breakdowns. A website sheet page is /sheets/<id>.html; a PDF from it will be
+// sheet_pdf_opened with $lib basics-site and sheet_id once the site sends it (not yet on 2026-11-23)
+export const DETAIL = `multiIf(
+  event = 'tab_opened', coalesce(properties.tab, ''),
+  event IN ('quiz_started', 'quiz_completed', 'mock_completed'), coalesce(properties.mode, ''),
+  event IN ('arcade_game_started', 'arcade_game_completed', 'arcade_result_shared'), coalesce(properties.game, ''),
+  event = 'reference_opened', concat(coalesce(properties.kind, ''), '/', coalesce(properties.id, '')),
+  event IN ('sheet_pdf_opened', 'sheet_shared'), coalesce(properties.sheet_id, ''),
+  event IN ('drill_started', 'drill_completed'), coalesce(properties.drill_id, ''),
+  event = '$pageview' AND properties.$lib = 'basics-site' AND properties.$pathname LIKE '%/sheets/%.html', replaceRegexpAll(properties.$pathname, '^.*/sheets/|[.]html$', ''),
+  '')`;
+
 export const queries = (days) => {
   const from = addDays(today, -days + 1);
   const since = `timestamp >= toDateTime('${addDays(from, -1)} 00:00:00')`;
@@ -97,7 +111,13 @@ export const queries = (days) => {
         countIf(event = 'app_opened' AND coalesce(properties.from, '') != '') AS from_site,
         countIf(event = 'rate_link_opened') AS rate_links,
         countIf(event LIKE '%review_prompt%') AS review_prompts,
-        countIf(event LIKE '%paywall%') AS paywall
+        countIf(event LIKE '%paywall%') AS paywall,
+        countIf(event = 'arcade_game_started') AS arcade_plays,
+        countIf(event = 'arcade_game_completed') AS arcade_done,
+        countIf(event = 'reference_opened') AS reference_views,
+        countIf(event = 'reference_opened' AND properties.kind IN ('sheet', 'guide')) AS sheet_views,
+        countIf(event = 'sheet_pdf_opened') AS sheet_pdfs,
+        countIf(event = 'sheet_shared') AS sheet_shares
       FROM events WHERE ${since} AND ${APP}
       GROUP BY day, brand, platform HAVING day >= toDate('${from}') ORDER BY day LIMIT 50000`,
     // Each event counts toward its own day and the six after it: distinct devices over the 7 days ending on `day`
@@ -149,11 +169,22 @@ export const queries = (days) => {
       FROM events WHERE timestamp >= toDateTime('${addDays(today, -3)} 00:00:00') AND ${APP}
         AND toHour(toTimeZone(timestamp, '${TZ}')) * 3600 + toMinute(toTimeZone(timestamp, '${TZ}')) * 60 + toSecond(toTimeZone(timestamp, '${TZ}')) <= ${secondsNow()}
       GROUP BY day, brand, platform HAVING day >= toDate('${addDays(today, -2)}') ORDER BY day LIMIT 1000`,
-    // Every event in the last 30 days with its 7-day and 24-hour counts; tab_opened split by tab (top screens)
+    // Every event in the last 30 days by app and platform, with 7-day, prior-7-day and 24-hour counts, devices, and a
+    // detail for the usage events (Basics Social's PostHog tab, "How people use the app"): tab_opened's tab, a quiz's
+    // mode, an arcade game, a Reference page (kind/id), a sheet id (PDF, share), a drill id, and a website sheet page
     events: `SELECT event, coalesce(properties.platform, if(properties.$lib = 'basics-site', 'site', '')) AS platform,
-        if(event = 'tab_opened', coalesce(properties.tab, ''), '') AS tab,
+        coalesce(properties.brand, '') AS brand, ${DETAIL} AS detail,
+        count() AS n, countIf(timestamp >= now() - INTERVAL 7 DAY) AS n7,
+        countIf(timestamp >= now() - INTERVAL 14 DAY AND timestamp < now() - INTERVAL 7 DAY) AS p7,
+        countIf(timestamp >= now() - INTERVAL 1 DAY) AS n1,
+        count(DISTINCT distinct_id) AS users, count(DISTINCT if(timestamp >= now() - INTERVAL 7 DAY, distinct_id, NULL)) AS users7,
+        avg(if(event IN ('arcade_game_completed', 'quiz_completed', 'mock_completed', 'drill_completed'), toFloat(properties.score), NULL)) AS avg_score
+      FROM events WHERE timestamp >= now() - INTERVAL 30 DAY GROUP BY event, platform, brand, detail ORDER BY n DESC LIMIT 5000`,
+    // The events query as it was before the usage detail, asked only if that one fails
+    eventsPlain: `SELECT event, coalesce(properties.platform, if(properties.$lib = 'basics-site', 'site', '')) AS platform,
+        if(event = 'tab_opened', coalesce(properties.tab, ''), '') AS detail,
         count() AS n, countIf(timestamp >= now() - INTERVAL 7 DAY) AS n7, countIf(timestamp >= now() - INTERVAL 1 DAY) AS n1
-      FROM events WHERE timestamp >= now() - INTERVAL 30 DAY GROUP BY event, platform, tab ORDER BY n DESC LIMIT 600`,
+      FROM events WHERE timestamp >= now() - INTERVAL 30 DAY GROUP BY event, platform, detail ORDER BY n DESC LIMIT 600`,
   };
 };
 
@@ -178,10 +209,10 @@ export function toLines({ daily, weekly, newUsers, installs, sites }) {
   const apps = new Map();
   const app = (r) => {
     const k = `${String(r.day).slice(0, 10)}|${r.brand}|${r.platform}`;
-    if (!apps.has(k)) apps.set(k, { date: String(r.day).slice(0, 10), kind: 'app', brand: r.brand, platform: r.platform, dau: 0, wau: 0, newUsers: 0, firstSeen: 0, firstQuiz: 0, day2: 0, installs: 0, opens: 0, answers: 0, quizzes: 0, quizzesDone: 0, mocks: 0, mocksDone: 0, onboarded: 0, drills: 0, fromSite: 0, rateLinks: 0, reviewPrompts: 0, paywall: 0 });
+    if (!apps.has(k)) apps.set(k, { date: String(r.day).slice(0, 10), kind: 'app', brand: r.brand, platform: r.platform, dau: 0, wau: 0, newUsers: 0, firstSeen: 0, firstQuiz: 0, day2: 0, installs: 0, opens: 0, answers: 0, quizzes: 0, quizzesDone: 0, mocks: 0, mocksDone: 0, onboarded: 0, drills: 0, fromSite: 0, rateLinks: 0, reviewPrompts: 0, paywall: 0, arcadePlays: 0, arcadeDone: 0, referenceViews: 0, sheetViews: 0, sheetPdfs: 0, sheetShares: 0 });
     return apps.get(k);
   };
-  for (const r of daily) Object.assign(app(r), { dau: num(r.dau), opens: num(r.opens), answers: num(r.answers), quizzes: num(r.quizzes), quizzesDone: num(r.quizzes_done), mocks: num(r.mocks), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded), drills: num(r.drills), fromSite: num(r.from_site), rateLinks: num(r.rate_links), reviewPrompts: num(r.review_prompts), paywall: num(r.paywall) });
+  for (const r of daily) Object.assign(app(r), { dau: num(r.dau), opens: num(r.opens), answers: num(r.answers), quizzes: num(r.quizzes), quizzesDone: num(r.quizzes_done), mocks: num(r.mocks), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded), drills: num(r.drills), fromSite: num(r.from_site), rateLinks: num(r.rate_links), reviewPrompts: num(r.review_prompts), paywall: num(r.paywall), arcadePlays: num(r.arcade_plays), arcadeDone: num(r.arcade_done), referenceViews: num(r.reference_views), sheetViews: num(r.sheet_views), sheetPdfs: num(r.sheet_pdfs), sheetShares: num(r.sheet_shares) });
   for (const r of weekly ?? []) app(r).wau = num(r.wau);
   for (const r of newUsers ?? []) Object.assign(app(r), { newUsers: num(r.new_users), firstSeen: num(r.first_seen), firstQuiz: num(r.first_quiz), day2: num(r.day2) });
   for (const r of installs ?? []) app(r).installs = num(r.installs);
@@ -204,19 +235,31 @@ export function toLines({ daily, weekly, newUsers, installs, sites }) {
   return [...apps.values(), ...siteMap.values()];
 }
 
-/** The events query's rows → the event list (tabs added up) and the screens (tab_opened by tab). */
+/** The events query's rows → the event list (by event and platform), the screens (tab_opened by tab and platform) and
+ * the usage rows (every row with a detail, by app and platform) for the PostHog tab. Counts add up; devices do not, so
+ * `users` is kept per row only. */
 export function eventLists(rows) {
-  const ev = new Map();
-  const screens = [];
+  const ev = new Map(), sc = new Map();
+  const usage = [];
   for (const r of rows) {
     const platform = r.platform || '';
+    const detail = r.detail ?? r.tab ?? '';
     const k = `${r.event}|${platform}`;
     if (!ev.has(k)) ev.set(k, { event: r.event, platform, count: 0, n7: 0, n1: 0 });
     const e = ev.get(k);
     e.count += num(r.n); e.n7 += num(r.n7); e.n1 += num(r.n1);
-    if (r.event === 'tab_opened' && r.tab) screens.push({ tab: r.tab, platform, count: num(r.n), n7: num(r.n7), n1: num(r.n1) });
+    if (r.event === 'tab_opened' && detail) {
+      const sk = `${detail}|${platform}`;
+      if (!sc.has(sk)) sc.set(sk, { tab: detail, platform, count: 0, n7: 0, n1: 0 });
+      const x = sc.get(sk); x.count += num(r.n); x.n7 += num(r.n7); x.n1 += num(r.n1);
+    }
+    if (detail && 'brand' in r) {
+      const u = { event: r.event, detail, brand: r.brand || '', platform, n: num(r.n), n7: num(r.n7), p7: num(r.p7), n1: num(r.n1), users: num(r.users), users7: num(r.users7) };
+      if (r.avg_score !== null && r.avg_score !== undefined && Number.isFinite(Number(r.avg_score))) u.avgScore = Math.round(Number(r.avg_score) * 10) / 10;
+      usage.push(u);
+    }
   }
-  return { events: [...ev.values()].sort((a, b) => b.count - a.count), screens: screens.sort((a, b) => b.count - a.count) };
+  return { events: [...ev.values()].sort((a, b) => b.count - a.count), screens: [...sc.values()].sort((a, b) => b.count - a.count), usage };
 }
 
 function save(lines, from, state) {
@@ -257,14 +300,19 @@ export async function fetchPostHog() {
     }
     let events = state.events ?? [];
     let screens = state.screens ?? [];
-    try { ({ events, screens } = eventLists(await query(project, key, 'events', q.events))); } catch (e) { log(`events list: ${scrub(e.message)}`); }
+    let usage = state.usage ?? [];
+    try { ({ events, screens, usage } = eventLists(await query(project, key, 'events', q.events))); } catch (e) {
+      // The usage detail is new (2026-11-23): if that query fails, ask the plain list once and keep the old usage rows
+      log(`events list: ${scrub(e.message)}; asking the plain list`);
+      try { ({ events, screens } = eventLists(await query(project, key, 'eventsPlain', q.eventsPlain))); } catch (e2) { log(`events list: ${scrub(e2.message)}`); }
+    }
     let sameHour = null;
     try {
       const asOf = new Date().toISOString();
       sameHour = { asOf, rows: (await query(project, key, 'sameHour', q.sameHour)).map((r) => ({ date: String(r.day).slice(0, 10), brand: r.brand, platform: r.platform, dau: num(r.dau), answers: num(r.answers), quizzesDone: num(r.quizzes_done), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded) })) };
     } catch (e) { log(`same-hour comparison: ${scrub(e.message)}`); }
     const lines = toLines(rows);
-    Object.assign(state, { status: 'ok', message: `${lines.length} lines for ${from} to ${today}`, checkedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), from, to: today, project, events, screens, sameHour, fake: fake || undefined });
+    Object.assign(state, { status: 'ok', message: `${lines.length} lines for ${from} to ${today}`, checkedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), from, to: today, project, events, screens, usage, sameHour, fake: fake || undefined });
     save(lines, from, state);
     log(`${lines.filter((l) => l.kind === 'app').length} app lines, ${lines.filter((l) => l.kind === 'site').length} site lines, ${from} to ${today}${first ? ' (first run)' : ''}`);
     return 0;
