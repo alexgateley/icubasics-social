@@ -42,3 +42,32 @@ test('links pages (basics-links) count: views, store buttons and other buttons, 
   const rn = lines.filter((l) => l.kind === 'site' && l.site === 'rnbasics.com' && l.linksViews > 0);
   assert.ok(rn.length > 0 && rn.every((l) => l.linkClicks === 1 && l.pageviews > l.linksViews), 'links pages add to the old sites');
 });
+
+test('the widened queries (2026-11-23): funnel, rating and paywall columns, screens and 7-day counts, with no extra query', () => {
+  const q = queries(14);
+  assert.match(q.daily, /rate_link_opened/);
+  assert.match(q.daily, /%paywall%/);
+  assert.match(q.newUsers, /AS first_quiz/);
+  assert.match(q.newUsers, /AS day2/);
+  assert.match(q.events, /AS n7/);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'posthog-test-'));
+  const r = spawnSync(process.execPath, ['--import', path.join(here, 'posthog-fake-api.mjs'), path.join(here, 'posthog.mjs')], { encoding: 'utf8', timeout: 30000, env: { ...process.env, ANALYTICS_DIR: dir } });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  const lines = fs.readFileSync(path.join(dir, 'posthog.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l));
+  const apps = lines.filter((l) => l.kind === 'app');
+  assert.ok(apps.some((l) => l.firstQuiz > 0 && l.day2 > 0 && l.rateLinks > 0));
+  const st = JSON.parse(fs.readFileSync(path.join(dir, 'posthog-state.json'), 'utf8'));
+  assert.deepEqual(st.screens.slice(0, 2).map((x) => x.tab), ['home', 'home']);
+  const tabs = st.events.filter((e) => e.event === 'tab_opened');
+  assert.deepEqual(tabs.map((e) => [e.platform, e.count]), [['ios', 4240], ['web', 4240]], 'tabs added up in the event list');
+  assert.ok(st.events.every((e) => 'n7' in e && 'n1' in e));
+});
+
+test('if the funnel query fails, the plain new-users query is asked once and the rest is kept', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'posthog-test-'));
+  const r = spawnSync(process.execPath, ['--import', path.join(here, 'posthog-fake-api.mjs'), path.join(here, 'posthog.mjs')], { encoding: 'utf8', timeout: 30000, env: { ...process.env, ANALYTICS_DIR: dir, POSTHOG_FAKE_FAIL_QUERY: 'newUsers' } });
+  assert.equal(r.status, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /asking new users without the funnel/);
+  const apps = fs.readFileSync(path.join(dir, 'posthog.jsonl'), 'utf8').split('\n').filter(Boolean).map((l) => JSON.parse(l)).filter((l) => l.kind === 'app');
+  assert.ok(apps.some((l) => l.firstSeen > 0) && apps.every((l) => l.day2 === 0));
+});

@@ -1,5 +1,5 @@
 // PostHog numbers for the three Basics apps and the Basics websites (all nine), for the Basics Social app's "App usage" tab.
-// Runs ONLY on Alex's Mac, and only when Alex clicks Refresh in the Basics Social app (usage is metered; never nightly):
+// Runs ONLY on Alex's Mac: from Basics Social's 2 AM job (helper/nightly.sh, PULL=posthog) or its App data link (usage is metered):
 // this repository is public, so nothing here writes into it. Every call is a read (HogQL query API) with a
 // read-only personal API key from the login keychain (service icubasics-social, items POSTHOG_PERSONAL_API_KEY
 // and POSTHOG_PROJECT_ID; store them with sh scripts/setup-keychain.sh posthog). The key is sent only in the
@@ -39,7 +39,8 @@
 //                        installs, answers, quizzesDone, mocksDone, onboarded, ...) and per site (kind "site"); a
 //                        refetched day replaces its lines
 //   posthog-state.json   no secrets: when and how the last fetch went, the window, the events seen in the
-//                        last 30 days with their counts, and sameHour (today, yesterday and the day before, each up to
+//                        last 30 days with their counts (n = 30 days, n7 = 7 days, n1 = 24 hours), screens (tab_opened
+//                        by tab, same counts; for the PostHog tab's top screens), and sameHour (today, yesterday and the day before, each up to
 //                        the time of the fetch, for "today so far vs yesterday at this hour")
 import fs from 'node:fs';
 import os from 'node:os';
@@ -93,7 +94,10 @@ export const queries = (days) => {
         countIf(event = 'mock_completed') AS mocks_done,
         countIf(event = 'onboarding_completed') AS onboarded,
         countIf(event = 'drill_answered') AS drills,
-        countIf(event = 'app_opened' AND coalesce(properties.from, '') != '') AS from_site
+        countIf(event = 'app_opened' AND coalesce(properties.from, '') != '') AS from_site,
+        countIf(event = 'rate_link_opened') AS rate_links,
+        countIf(event LIKE '%review_prompt%') AS review_prompts,
+        countIf(event LIKE '%paywall%') AS paywall
       FROM events WHERE ${since} AND ${APP}
       GROUP BY day, brand, platform HAVING day >= toDate('${from}') ORDER BY day LIMIT 50000`,
     // Each event counts toward its own day and the six after it: distinct devices over the 7 days ending on `day`
@@ -102,8 +106,19 @@ export const queries = (days) => {
       WHERE timestamp >= toDateTime('${addDays(from, -7)} 00:00:00') AND ${APP}
       GROUP BY day, brand, platform HAVING day >= toDate('${from}') AND day <= toDate('${today}') ORDER BY day LIMIT 50000`,
     // A device's first event ever; "new" when its app_opened that day says days_since_install 0 (devices from before
-    // analytics was switched on have older installs, so they are first_seen but not new)
-    newUsers: `SELECT toDate(toTimeZone(first, '${TZ}')) AS day, brand, platform, count() AS first_seen, countIf(fresh > 0) AS new_users
+    // analytics was switched on have older installs, so they are first_seen but not new). The same pass gives the
+    // first-run funnel (2026-11-23, PostHog tab): first_quiz = of those devices, how many ever answered a question or
+    // started a quiz; day2 = how many came back the next calendar day (Chicago)
+    newUsers: `SELECT toDate(toTimeZone(first, '${TZ}')) AS day, brand, platform, count() AS first_seen, countIf(fresh > 0) AS new_users,
+        countIf(quizzed > 0) AS first_quiz, countIf(has(days, addDays(toDate(toTimeZone(first, '${TZ}')), 1))) AS day2
+      FROM (SELECT distinct_id, min(timestamp) AS first, argMin(properties.brand, timestamp) AS brand, argMin(properties.platform, timestamp) AS platform,
+          countIf(event = 'app_opened' AND toFloat(properties.days_since_install) = 0) AS fresh,
+          countIf(event IN ('question_answered', 'quiz_started')) AS quizzed,
+          groupUniqArray(${DAY}) AS days
+        FROM events WHERE timestamp >= toDateTime('2026-06-01 00:00:00') AND ${APP} GROUP BY distinct_id)
+      WHERE day >= toDate('${from}') GROUP BY day, brand, platform ORDER BY day LIMIT 50000`,
+    // The query above without the funnel, asked only if that one fails, so new users never go missing for a night
+    newUsersPlain: `SELECT toDate(toTimeZone(first, '${TZ}')) AS day, brand, platform, count() AS first_seen, countIf(fresh > 0) AS new_users
       FROM (SELECT distinct_id, min(timestamp) AS first, argMin(properties.brand, timestamp) AS brand, argMin(properties.platform, timestamp) AS platform,
           countIf(event = 'app_opened' AND toFloat(properties.days_since_install) = 0) AS fresh
         FROM events WHERE timestamp >= toDateTime('2026-06-01 00:00:00') AND ${APP} GROUP BY distinct_id)
@@ -134,8 +149,11 @@ export const queries = (days) => {
       FROM events WHERE timestamp >= toDateTime('${addDays(today, -3)} 00:00:00') AND ${APP}
         AND toHour(toTimeZone(timestamp, '${TZ}')) * 3600 + toMinute(toTimeZone(timestamp, '${TZ}')) * 60 + toSecond(toTimeZone(timestamp, '${TZ}')) <= ${secondsNow()}
       GROUP BY day, brand, platform HAVING day >= toDate('${addDays(today, -2)}') ORDER BY day LIMIT 1000`,
-    events: `SELECT event, coalesce(properties.platform, if(properties.$lib = 'basics-site', 'site', '')) AS platform, count() AS n
-      FROM events WHERE timestamp >= now() - INTERVAL 30 DAY GROUP BY event, platform ORDER BY n DESC LIMIT 400`,
+    // Every event in the last 30 days with its 7-day and 24-hour counts; tab_opened split by tab (top screens)
+    events: `SELECT event, coalesce(properties.platform, if(properties.$lib = 'basics-site', 'site', '')) AS platform,
+        if(event = 'tab_opened', coalesce(properties.tab, ''), '') AS tab,
+        count() AS n, countIf(timestamp >= now() - INTERVAL 7 DAY) AS n7, countIf(timestamp >= now() - INTERVAL 1 DAY) AS n1
+      FROM events WHERE timestamp >= now() - INTERVAL 30 DAY GROUP BY event, platform, tab ORDER BY n DESC LIMIT 600`,
   };
 };
 
@@ -160,12 +178,12 @@ export function toLines({ daily, weekly, newUsers, installs, sites }) {
   const apps = new Map();
   const app = (r) => {
     const k = `${String(r.day).slice(0, 10)}|${r.brand}|${r.platform}`;
-    if (!apps.has(k)) apps.set(k, { date: String(r.day).slice(0, 10), kind: 'app', brand: r.brand, platform: r.platform, dau: 0, wau: 0, newUsers: 0, firstSeen: 0, installs: 0, opens: 0, answers: 0, quizzes: 0, quizzesDone: 0, mocks: 0, mocksDone: 0, onboarded: 0, drills: 0, fromSite: 0 });
+    if (!apps.has(k)) apps.set(k, { date: String(r.day).slice(0, 10), kind: 'app', brand: r.brand, platform: r.platform, dau: 0, wau: 0, newUsers: 0, firstSeen: 0, firstQuiz: 0, day2: 0, installs: 0, opens: 0, answers: 0, quizzes: 0, quizzesDone: 0, mocks: 0, mocksDone: 0, onboarded: 0, drills: 0, fromSite: 0, rateLinks: 0, reviewPrompts: 0, paywall: 0 });
     return apps.get(k);
   };
-  for (const r of daily) Object.assign(app(r), { dau: num(r.dau), opens: num(r.opens), answers: num(r.answers), quizzes: num(r.quizzes), quizzesDone: num(r.quizzes_done), mocks: num(r.mocks), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded), drills: num(r.drills), fromSite: num(r.from_site) });
+  for (const r of daily) Object.assign(app(r), { dau: num(r.dau), opens: num(r.opens), answers: num(r.answers), quizzes: num(r.quizzes), quizzesDone: num(r.quizzes_done), mocks: num(r.mocks), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded), drills: num(r.drills), fromSite: num(r.from_site), rateLinks: num(r.rate_links), reviewPrompts: num(r.review_prompts), paywall: num(r.paywall) });
   for (const r of weekly ?? []) app(r).wau = num(r.wau);
-  for (const r of newUsers ?? []) Object.assign(app(r), { newUsers: num(r.new_users), firstSeen: num(r.first_seen) });
+  for (const r of newUsers ?? []) Object.assign(app(r), { newUsers: num(r.new_users), firstSeen: num(r.first_seen), firstQuiz: num(r.first_quiz), day2: num(r.day2) });
   for (const r of installs ?? []) app(r).installs = num(r.installs);
   const siteMap = new Map();
   for (const r of sites) {
@@ -184,6 +202,21 @@ export function toLines({ daily, weekly, newUsers, installs, sites }) {
     else if (r.event === 'links_click') s.linkClicks += n;
   }
   return [...apps.values(), ...siteMap.values()];
+}
+
+/** The events query's rows → the event list (tabs added up) and the screens (tab_opened by tab). */
+export function eventLists(rows) {
+  const ev = new Map();
+  const screens = [];
+  for (const r of rows) {
+    const platform = r.platform || '';
+    const k = `${r.event}|${platform}`;
+    if (!ev.has(k)) ev.set(k, { event: r.event, platform, count: 0, n7: 0, n1: 0 });
+    const e = ev.get(k);
+    e.count += num(r.n); e.n7 += num(r.n7); e.n1 += num(r.n1);
+    if (r.event === 'tab_opened' && r.tab) screens.push({ tab: r.tab, platform, count: num(r.n), n7: num(r.n7), n1: num(r.n1) });
+  }
+  return { events: [...ev.values()].sort((a, b) => b.count - a.count), screens: screens.sort((a, b) => b.count - a.count) };
 }
 
 function save(lines, from, state) {
@@ -213,19 +246,25 @@ export async function fetchPostHog() {
     const rows = {};
     for (const name of ['daily', 'weekly', 'newUsers', 'installs', 'sites']) {
       try { rows[name] = await query(project, key, name, q[name]); } catch (e) {
+        // The funnel columns are new (2026-11-23): if that query fails, ask the plain one once so new users stay
+        if (name === 'newUsers') {
+          log(`${scrub(e.message)}; asking new users without the funnel`);
+          try { rows[name] = await query(project, key, 'newUsersPlain', q.newUsersPlain); continue; } catch (e2) { e = e2; }
+        }
         // WAU and new users are extras: keep the daily numbers when one of them fails
         if (name === 'weekly' || name === 'newUsers' || name === 'installs') { log(`${scrub(e.message)}; ${name} left out`); rows[name] = []; } else throw e;
       }
     }
     let events = state.events ?? [];
-    try { events = (await query(project, key, 'events', q.events)).map((r) => ({ event: r.event, platform: r.platform || '', count: num(r.n) })); } catch (e) { log(`events list: ${scrub(e.message)}`); }
+    let screens = state.screens ?? [];
+    try { ({ events, screens } = eventLists(await query(project, key, 'events', q.events))); } catch (e) { log(`events list: ${scrub(e.message)}`); }
     let sameHour = null;
     try {
       const asOf = new Date().toISOString();
       sameHour = { asOf, rows: (await query(project, key, 'sameHour', q.sameHour)).map((r) => ({ date: String(r.day).slice(0, 10), brand: r.brand, platform: r.platform, dau: num(r.dau), answers: num(r.answers), quizzesDone: num(r.quizzes_done), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded) })) };
     } catch (e) { log(`same-hour comparison: ${scrub(e.message)}`); }
     const lines = toLines(rows);
-    Object.assign(state, { status: 'ok', message: `${lines.length} lines for ${from} to ${today}`, checkedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), from, to: today, project, events, sameHour, fake: fake || undefined });
+    Object.assign(state, { status: 'ok', message: `${lines.length} lines for ${from} to ${today}`, checkedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), from, to: today, project, events, screens, sameHour, fake: fake || undefined });
     save(lines, from, state);
     log(`${lines.filter((l) => l.kind === 'app').length} app lines, ${lines.filter((l) => l.kind === 'site').length} site lines, ${from} to ${today}${first ? ' (first run)' : ''}`);
     return 0;

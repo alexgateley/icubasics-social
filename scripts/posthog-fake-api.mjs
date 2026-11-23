@@ -5,7 +5,7 @@
 // Sets POSTHOG_FAKE=1 (posthog.mjs then skips the keychain) and replaces fetch. Each query is answered from its
 // `name` (basics-social daily / weekly / newUsers / sites / events) with made-up rows in the shape HogQL returns
 // ({ columns, results }), including site visits from Instagram, TikTok and YouTube, which the live sites do not send yet.
-// POSTHOG_FAKE_FAIL=401 answers every query with that HTTP status.
+// POSTHOG_FAKE_FAIL=401 answers every query with that HTTP status; POSTHOG_FAKE_FAIL_QUERY=newUsers fails only that query (400).
 process.env.POSTHOG_FAKE = '1';
 const TZ = 'America/Chicago';
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
@@ -25,8 +25,9 @@ function answer(name) {
     return { columns: ['day', 'brand', 'platform', 'dau', 'answers', 'quizzes_done', 'mocks_done', 'onboarded'], results: rows };
   }
   if (name === 'events') {
-    for (const [e, c] of [['question_answered', 13872], ['answer_rated', 3744], ['app_opened', 1241], ['quiz_completed', 678], ['onboarding_completed', 147], ['$pageview', 900]]) rows.push([e, e === '$pageview' ? 'site' : 'ios', c]);
-    return { columns: ['event', 'platform', 'n'], results: rows };
+    for (const [e, c] of [['question_answered', 13872], ['answer_rated', 3744], ['app_opened', 1241], ['quiz_completed', 678], ['onboarding_completed', 147], ['rate_link_opened', 12], ['$pageview', 900]]) rows.push([e, e === '$pageview' ? 'site' : 'ios', '', c, Math.round(c / 4), Math.round(c / 30)]);
+    for (const [tab, c] of [['home', 2100], ['study', 1500], ['reference', 640]]) for (const p of ['ios', 'web']) rows.push(['tab_opened', p, tab, c, Math.round(c / 4), Math.round(c / 30)]);
+    return { columns: ['event', 'platform', 'tab', 'n', 'n7', 'n1'], results: rows };
   }
   // A newer site with only a links page (no basics-site snippet), as respiratorybasics.com on 2026-11-20
   if (name === 'sites') for (let n = 2; n >= 0; n--) {
@@ -52,17 +53,19 @@ function answer(name) {
       }
       for (const [p, pw] of Object.entries(PLATFORMS)) {
         const dau = Math.round(6 * bw * pw * grow * (0.8 + rand() * 0.4) * (1 + (lift(n) - 1) * 0.3));
-        if (name === 'daily') rows.push([d, b, p, dau, dau + 2, dau * 14, 0, Math.round(dau * 0.8), 0, Math.round(dau / 20), Math.round(dau / 15), Math.round(dau * 0.4), p === 'web' ? Math.round(dau / 6) : 0]);
+        if (name === 'daily') rows.push([d, b, p, dau, dau + 2, dau * 14, 0, Math.round(dau * 0.8), 0, Math.round(dau / 20), Math.round(dau / 15), Math.round(dau * 0.4), p === 'web' ? Math.round(dau / 6) : 0, Math.round(dau / 25), 0, 0]);
         if (name === 'weekly') rows.push([d, b, p, Math.round(dau * 3.2)]);
         if (name === 'installs' && p !== 'web') rows.push([d, b, p, Math.round(dau * 0.25 * lift(n))]);
-        if (name === 'newUsers') { const f = Math.round(dau * 0.3 * lift(n)); rows.push([d, b, p, f, 0]); }
+        if (name === 'newUsers') { const f = Math.round(dau * 0.3 * lift(n)); rows.push([d, b, p, f, 0, Math.round(f * 0.7), n > 0 ? Math.round(f * 0.3) : 0]); }
+        if (name === 'newUsersPlain') { const f = Math.round(dau * 0.3 * lift(n)); rows.push([d, b, p, f, 0]); }
       }
     }
   }
   const columns = {
-    daily: ['day', 'brand', 'platform', 'dau', 'opens', 'answers', 'quizzes', 'quizzes_done', 'mocks', 'mocks_done', 'onboarded', 'drills', 'from_site'],
+    daily: ['day', 'brand', 'platform', 'dau', 'opens', 'answers', 'quizzes', 'quizzes_done', 'mocks', 'mocks_done', 'onboarded', 'drills', 'from_site', 'rate_links', 'review_prompts', 'paywall'],
     weekly: ['day', 'brand', 'platform', 'wau'],
-    newUsers: ['day', 'brand', 'platform', 'first_seen', 'new_users'],
+    newUsers: ['day', 'brand', 'platform', 'first_seen', 'new_users', 'first_quiz', 'day2'],
+    newUsersPlain: ['day', 'brand', 'platform', 'first_seen', 'new_users'],
     installs: ['day', 'brand', 'platform', 'installs'],
     sites: ['day', 'site', 'brand', 'event', 'kind', 'source', 'n'],
   }[name];
@@ -74,6 +77,7 @@ globalThis.fetch = async (url, opts = {}) => {
   const fail = Number(process.env.POSTHOG_FAKE_FAIL || 0);
   const body = JSON.parse(opts.body);
   const name = String(body.name ?? '').replace('basics-social ', '');
-  const json = fail ? { detail: 'Invalid personal API key.' } : answer(name);
-  return new Response(JSON.stringify(json), { status: fail || 200, headers: { 'Content-Type': 'application/json' } });
+  const one = process.env.POSTHOG_FAKE_FAIL_QUERY === name ? 400 : 0;
+  const json = fail ? { detail: 'Invalid personal API key.' } : one ? { detail: 'Unknown function' } : answer(name);
+  return new Response(JSON.stringify(json), { status: fail || one || 200, headers: { 'Content-Type': 'application/json' } });
 };
