@@ -40,7 +40,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        brand: [icu, rn, medic, rt, er, ekg, np, pharm, lab]
+        # ekg, np, pharm off since 2026-11-22: Alex says @ekgtechbasics, @npbasics and @pharmtechbasics are not working. Add them back here when they return.
+        brand: [icu, rn, medic, rt, er, lab]
     # One job per account; the marker commit step below retries around the other job's push
     concurrency:
       group: post-${{ matrix.brand }}

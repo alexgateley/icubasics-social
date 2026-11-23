@@ -88,9 +88,9 @@ const IG_ACCOUNTS = [
   // rt, er, ekg, np, pharm, lab: system-user tokens (EAA...) from the Basics Posting app, read through graph.facebook.com
   { account: 'rt', label: '@respiratorytherapybasics', suffix: '_RT', userId: '17841480403371899' },
   { account: 'er', label: '@theerbasics', suffix: '_ER', userId: '17841479868648523' },
-  { account: 'ekg', label: '@ekgtechbasics', suffix: '_EKG', userId: '17841458933751960' },
-  { account: 'np', label: '@npbasics', suffix: '_NP', userId: '17841445521547936' },
-  { account: 'pharm', label: '@pharmtechbasics', suffix: '_PHARM', userId: '17841455056336896' },
+  // { account: 'ekg', label: '@ekgtechbasics', suffix: '_EKG', userId: '17841458933751960' }, // off 2026-11-22: account not working (Alex)
+  // { account: 'np', label: '@npbasics', suffix: '_NP', userId: '17841445521547936' }, // off 2026-11-22: account not working (Alex)
+  // { account: 'pharm', label: '@pharmtechbasics', suffix: '_PHARM', userId: '17841455056336896' }, // off 2026-11-22: account not working (Alex)
   { account: 'lab', label: '@medlabbasics', suffix: '_LAB', userId: '17841453290927626' },
   { account: 'rhea', label: '@runonrhea', suffix: '_RHEA', userId: '17841426819974871' },
   { account: 'winery', label: '@thewinerybooks', suffix: '_WINERY', userId: '17841433053134440' },
