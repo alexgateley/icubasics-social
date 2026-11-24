@@ -36,8 +36,10 @@
 //
 // Store (ANALYTICS_DIR, default ~/basics-growth-work/analytics/):
 //   posthog.jsonl        one line per day per app (kind "app": brand, platform; dau, wau, firstSeen = new users,
-//                        installs, answers, quizzesDone, mocksDone, onboarded, ...) and per site (kind "site"); a
-//                        refetched day replaces its lines
+//                        installs, answers, quizzesDone, mocksDone, onboarded, started, reachedFive, activated, moreStarted, first10, ...;
+//                        leftOut / leftOutOwn = devices left out over the 7 days ending that day, see LEFT_OUT_RULE)
+//                        and per site (kind "site"); a refetched day replaces its lines. Every app number leaves out
+//                        our own visits and obvious bots (LEFT_OUT_RULE, since 2026-11-24)
 //   posthog-state.json   no secrets: when and how the last fetch went, the window, the events seen in the
 //                        last 30 days with their counts (n = 30 days, n7 = 7 days, n1 = 24 hours), screens (tab_opened
 //                        by tab, same counts; for the PostHog tab's top screens), usage (each usage event by app,
@@ -69,7 +71,57 @@ const secondsNow = () => { const [h, m, sec] = new Intl.DateTimeFormat('en-GB', 
 const DAY = `toDate(toTimeZone(timestamp, '${TZ}'))`;
 // Google Play's pre-launch test devices install every upload (about 5 per app); they are not people
 const NOT_ROBOT = `coalesce(properties.$device_name, '') NOT IN ('OnePlus8Pro', 'sdk_gphone_arm64')`;
-const APP = `properties.brand IN ('icu', 'rn', 'medic', 'er', 'rt', 'ekg', 'np', 'pharm', 'lab') AND properties.platform IN ('ios', 'android', 'web') AND event NOT LIKE '$%' AND ${NOT_ROBOT}`;
+const APP_BASE = `properties.brand IN ('icu', 'rn', 'medic', 'er', 'rt', 'ekg', 'np', 'pharm', 'lab') AND properties.platform IN ('ios', 'android', 'web') AND event NOT LIKE '$%' AND ${NOT_ROBOT}`;
+
+// Left out of every app number (2026-11-24): our own visits and obvious bots. One rule, per device (distinct_id), over
+// its whole history since 2026-06-01. A device is left out when:
+//   own:  any event came from the Claude app's built-in browser ($browser 'Claude', used for previews), or carries
+//         internal: true (the web app's flag for our own visits, coming soon; read when present); or
+//   bot:  a web-app event (posthog-js, $lib 'web') has no $browser, or its browser or raw user agent names a crawler or
+//         an automated browser (CRAWLER_WORDS); or the device is a Linux desktop, or Microsoft Edge on Windows, on the
+//         web app and every event it ever sent is one the app sends by itself on load (PASSIVE_EVENTS): no answer, no
+//         tap, nothing else in its whole history.
+// The phone apps (posthog-react-native) send no $browser and are never web, so only the "own" part can touch them; a
+// phone browser ($os iOS or Android) that bounced is kept. The websites' page views (basics-site, basics-links) have
+// no browser fields and a new id per page, so they are not touched. leftOutReason() below is the same rule in
+// JavaScript, for the tests.
+export const LEFT_OUT_RULE = {
+  since: '2026-06-01',
+  ownBrowsers: ['Claude'],
+  ownFlag: 'internal',
+  crawlerWords: ['bot/', 'bot;', 'crawl', 'spider', 'slurp', 'headless', 'lighthouse', 'phantomjs', 'puppeteer', 'playwright', 'selenium', 'facebookexternalhit', 'python-requests', 'curl/', 'wget'],
+  // [os, browser]; browser null = any browser
+  quietDesktops: [['Linux', null], ['Windows', 'Microsoft Edge']],
+  passiveEvents: ['app_boot', 'app_opened', 'onboarding_viewed', 'onboarding_step_viewed', 'first_question_viewed', 'storage_persist', 'storage_line_shown'],
+};
+const sq = (list) => list.map((x) => `'${x}'`).join(', ');
+const R = LEFT_OUT_RULE;
+const OWN = `(properties.$browser IN (${sq(R.ownBrowsers)}) OR coalesce(toString(properties.${R.ownFlag}), '') IN ('true', '1'))`;
+/** Event-level: not flagged internal (for the websites, whose page views have no device to judge) */
+const NOT_INTERNAL = `coalesce(toString(properties.${R.ownFlag}), '') NOT IN ('true', '1')`;
+const UA = `lower(concat(coalesce(properties.$browser, ''), ' ', coalesce(properties.$raw_user_agent, '')))`;
+const CRAWLER = `(${R.crawlerWords.map((w) => `${UA} LIKE '%${w}%'`).join(' OR ')})`;
+const QUIET_DESKTOP = `(${R.quietDesktops.map(([os, b]) => (b ? `(properties.$os = '${os}' AND properties.$browser = '${b}')` : `properties.$os = '${os}'`)).join(' OR ')})`;
+/** The rule over one device's events, for a query grouped by distinct_id */
+export const LEFT_OUT_HAVING = `countIf(${OWN}) > 0
+          OR countIf(properties.$lib = 'web' AND (coalesce(properties.$browser, '') = '' OR ${CRAWLER})) > 0
+          OR (countIf(properties.$lib = 'web' AND ${QUIET_DESKTOP}) > 0 AND countIf(event NOT IN (${sq(R.passiveEvents)})) = 0)`;
+/** The ids of the devices left out (a subquery, so no extra query is asked) */
+export const LEFT_OUT_IDS = `SELECT distinct_id FROM events WHERE timestamp >= toDateTime('${R.since} 00:00:00') AND ${APP_BASE}
+        GROUP BY distinct_id HAVING ${LEFT_OUT_HAVING}`;
+export const NOT_LEFT_OUT = `distinct_id NOT IN (${LEFT_OUT_IDS})`;
+const APP = `${APP_BASE} AND ${NOT_LEFT_OUT}`;
+
+/** The rule above for one device's events ({ event, $browser, $lib, $os, $raw_user_agent }): 'own', 'bot' or ''. */
+export function leftOutReason(events) {
+  const web = events.filter((e) => e.$lib === 'web');
+  const ua = (e) => `${e.$browser ?? ''} ${e.$raw_user_agent ?? ''}`.toLowerCase();
+  if (events.some((e) => R.ownBrowsers.includes(e.$browser) || [true, 'true', 1, '1'].includes(e[R.ownFlag]))) return 'own';
+  if (web.some((e) => !e.$browser || R.crawlerWords.some((w) => ua(e).includes(w)))) return 'bot';
+  const quiet = web.some((e) => R.quietDesktops.some(([os, b]) => e.$os === os && (!b || e.$browser === b)));
+  if (quiet && events.every((e) => R.passiveEvents.includes(e.event))) return 'bot';
+  return '';
+}
 // Referrer → source. Android apps arrive as android-app://<package> (TikTok's is com.zhiliaoapp.musically).
 // A tagged link's utm_source ("instagram", "tiktok", "youtube") wins over the referrer, which in-app browsers often leave out.
 export const SITE_SOURCE_INPUT = `lower(coalesce(nullIf(properties.utm_source, ''), properties.$referring_domain, ''))`;
@@ -94,6 +146,18 @@ export const DETAIL = `multiIf(
   event = '$pageview' AND properties.$lib = 'basics-site' AND properties.$pathname LIKE '%/sheets/%.html', replaceRegexpAll(properties.$pathname, '^.*/sheets/|[.]html$', ''),
   '')`;
 
+// The first run, three numbers (2026-11-24, approved by Alex). Since 2026-11-21 (live on the web 11-23) the first run is
+// 10 questions, 5 then "5 more to finish your first 10", and onboarding_completed fires only after question 10 or Skip,
+// so "onboarded" fell by design and is not compared across that change. Counted as devices:
+//   started      (per day) answered or skipped question 1: any onboarding_check_answered, or onboarding_skipped at index 1+
+//   reached five (per day) answered check question 5 or later (index >= 5), or sent onboarding_first5_done (coming)
+//   activated    (per first-seen day, in newUsers) answered 10 or more questions on its first day (Chicago)
+// Detail: more_started = started question 6 (onboarding_more_started), first10 = answered question 10; stopped at 6-9 =
+// more_started - first10. The web's coming events onboarding_engaged, onboarding_left and onboarding_resumed are counted
+// when present (0 until then); run_length and first_run_version are not needed for these.
+export const STARTED = `(event = 'onboarding_check_answered' OR (event = 'onboarding_skipped' AND toFloat(properties.index) >= 1))`;
+export const REACHED5 = `((event = 'onboarding_check_answered' AND toFloat(properties.index) >= 5) OR event = 'onboarding_first5_done')`;
+
 export const queries = (days) => {
   const from = addDays(today, -days + 1);
   const since = `timestamp >= toDateTime('${addDays(from, -1)} 00:00:00')`;
@@ -107,6 +171,13 @@ export const queries = (days) => {
         countIf(event = 'quiz_started' AND properties.mode = 'mock') AS mocks,
         countIf(event = 'mock_completed') AS mocks_done,
         countIf(event = 'onboarding_completed') AS onboarded,
+        count(DISTINCT if(${STARTED}, distinct_id, NULL)) AS started,
+        count(DISTINCT if(${REACHED5}, distinct_id, NULL)) AS reached_five,
+        count(DISTINCT if(event = 'onboarding_more_started', distinct_id, NULL)) AS more_started,
+        count(DISTINCT if(event = 'onboarding_check_answered' AND toFloat(properties.index) >= 10, distinct_id, NULL)) AS first10,
+        count(DISTINCT if(event = 'onboarding_engaged', distinct_id, NULL)) AS engaged,
+        count(DISTINCT if(event = 'onboarding_left', distinct_id, NULL)) AS left_run,
+        count(DISTINCT if(event = 'onboarding_resumed', distinct_id, NULL)) AS resumed,
         countIf(event = 'drill_answered') AS drills,
         countIf(event = 'app_opened' AND coalesce(properties.from, '') != '') AS from_site,
         countIf(event = 'rate_link_opened') AS rate_links,
@@ -121,34 +192,43 @@ export const queries = (days) => {
       FROM events WHERE ${since} AND ${APP}
       GROUP BY day, brand, platform HAVING day >= toDate('${from}') ORDER BY day LIMIT 50000`,
     // Each event counts toward its own day and the six after it: distinct devices over the 7 days ending on `day`
-    weekly: `SELECT addDays(${DAY}, n) AS day, properties.brand AS brand, properties.platform AS platform, count(DISTINCT distinct_id) AS wau
-      FROM events ARRAY JOIN [0, 1, 2, 3, 4, 5, 6] AS n
-      WHERE timestamp >= toDateTime('${addDays(from, -7)} 00:00:00') AND ${APP}
-      GROUP BY day, brand, platform HAVING day >= toDate('${from}') AND day <= toDate('${today}') ORDER BY day LIMIT 50000`,
+    // Since 2026-11-24 it also counts the devices left out (LEFT_OUT_RULE) over the same 7 days, and how many of them
+    // were our own (Claude browser): the "left out" line on the Apps and PostHog tabs
+    weekly: `SELECT day, brand, platform, count(DISTINCT if(lo = 0, id, NULL)) AS wau,
+        count(DISTINCT if(lo = 1, id, NULL)) AS left_out, count(DISTINCT if(lo = 1 AND own = 1, id, NULL)) AS left_out_own
+      FROM (SELECT addDays(${DAY}, n) AS day, properties.brand AS brand, properties.platform AS platform, distinct_id AS id,
+          if(distinct_id IN (${LEFT_OUT_IDS}), 1, 0) AS lo, if(${OWN}, 1, 0) AS own
+        FROM events ARRAY JOIN [0, 1, 2, 3, 4, 5, 6] AS n
+        WHERE timestamp >= toDateTime('${addDays(from, -7)} 00:00:00') AND ${APP_BASE})
+      WHERE day >= toDate('${from}') AND day <= toDate('${today}')
+      GROUP BY day, brand, platform ORDER BY day LIMIT 50000`,
     // A device's first event ever; "new" when its app_opened that day says days_since_install 0 (devices from before
     // analytics was switched on have older installs, so they are first_seen but not new). The same pass gives the
     // first-run funnel (2026-11-23, PostHog tab): first_quiz = of those devices, how many ever answered a question or
     // started a quiz; day2 = how many came back the next calendar day (Chicago)
     newUsers: `SELECT toDate(toTimeZone(first, '${TZ}')) AS day, brand, platform, count() AS first_seen, countIf(fresh > 0) AS new_users,
-        countIf(quizzed > 0) AS first_quiz, countIf(has(days, addDays(toDate(toTimeZone(first, '${TZ}')), 1))) AS day2
+        countIf(quizzed > 0) AS first_quiz, countIf(has(days, addDays(toDate(toTimeZone(first, '${TZ}')), 1))) AS day2,
+        countIf(arrayCount(x -> x = toDate(toTimeZone(first, '${TZ}')), answer_days) >= 10) AS activated
       FROM (SELECT distinct_id, min(timestamp) AS first, argMin(properties.brand, timestamp) AS brand, argMin(properties.platform, timestamp) AS platform,
           countIf(event = 'app_opened' AND toFloat(properties.days_since_install) = 0) AS fresh,
           countIf(event IN ('question_answered', 'quiz_started')) AS quizzed,
-          groupUniqArray(${DAY}) AS days
-        FROM events WHERE timestamp >= toDateTime('2026-06-01 00:00:00') AND ${APP} GROUP BY distinct_id)
-      WHERE day >= toDate('${from}') GROUP BY day, brand, platform ORDER BY day LIMIT 50000`,
+          groupUniqArray(${DAY}) AS days, groupArrayIf(${DAY}, event = 'question_answered') AS answer_days, if(${LEFT_OUT_HAVING}, 1, 0) AS lo
+        FROM events WHERE timestamp >= toDateTime('${R.since} 00:00:00') AND ${APP_BASE} GROUP BY distinct_id)
+      WHERE day >= toDate('${from}') AND lo = 0 GROUP BY day, brand, platform ORDER BY day LIMIT 50000`,
+    // Left-out devices (LEFT_OUT_RULE) are flagged in this same per-device pass (lo) rather than with NOT IN: on
+    // 2026-11-24 PostHog refused a NOT IN subquery inside this grouped subquery, while the other queries took it.
     // The query above without the funnel, asked only if that one fails, so new users never go missing for a night
     newUsersPlain: `SELECT toDate(toTimeZone(first, '${TZ}')) AS day, brand, platform, count() AS first_seen, countIf(fresh > 0) AS new_users
       FROM (SELECT distinct_id, min(timestamp) AS first, argMin(properties.brand, timestamp) AS brand, argMin(properties.platform, timestamp) AS platform,
-          countIf(event = 'app_opened' AND toFloat(properties.days_since_install) = 0) AS fresh
-        FROM events WHERE timestamp >= toDateTime('2026-06-01 00:00:00') AND ${APP} GROUP BY distinct_id)
-      WHERE day >= toDate('${from}') GROUP BY day, brand, platform ORDER BY day LIMIT 50000`,
+          countIf(event = 'app_opened' AND toFloat(properties.days_since_install) = 0) AS fresh, if(${LEFT_OUT_HAVING}, 1, 0) AS lo
+        FROM events WHERE timestamp >= toDateTime('${R.since} 00:00:00') AND ${APP_BASE} GROUP BY distinct_id)
+      WHERE day >= toDate('${from}') AND lo = 0 GROUP BY day, brand, platform ORDER BY day LIMIT 50000`,
     // posthog-react-native's first launch after an install. It fires before the brand is registered, so the brand
     // comes from the app's bundle id ($app_namespace) and the platform from $os (iOS and iPadOS are ios)
     installs: `SELECT ${DAY} AS day,
         multiIf(properties.$app_namespace LIKE '%icubasics%', 'icu', properties.$app_namespace LIKE '%rnbasics%', 'rn', properties.$app_namespace LIKE '%medicbasics%', 'medic', properties.$app_namespace LIKE '%erbasics%', 'er', properties.$app_namespace LIKE '%respiratorybasics%', 'rt', properties.$app_namespace LIKE '%ekgtechbasics%', 'ekg', properties.$app_namespace LIKE '%npbasics%', 'np', properties.$app_namespace LIKE '%pharmtechbasics%', 'pharm', properties.$app_namespace LIKE '%medlabbasics%', 'lab', '') AS brand,
         if(properties.$os = 'Android', 'android', 'ios') AS platform, count() AS installs
-      FROM events WHERE ${since} AND event = 'Application Installed' AND ${NOT_ROBOT}
+      FROM events WHERE ${since} AND event = 'Application Installed' AND ${NOT_ROBOT} AND ${NOT_LEFT_OUT}
       GROUP BY day, brand, platform HAVING day >= toDate('${from}') AND brand != '' ORDER BY day LIMIT 50000`,
     // kind: site_outbound_click's kind; links_click's link (app_store, play, website, family_<brand>, ...); 'links' for a
     // page view of a /links page (basics-links), so those can be told apart from the rest of the site
@@ -156,7 +236,7 @@ export const queries = (days) => {
         SELECT ${DAY} AS day, properties.site AS site, properties.brand AS brand, event,
           if(event = '$pageview', if(properties.$lib = 'basics-links', 'links', ''), coalesce(nullIf(properties.kind, ''), properties.link, '')) AS kind,
           ${SITE_SOURCE_INPUT} AS r, ${SOURCE} AS source
-        FROM events WHERE ${since} AND properties.$lib IN ('basics-site', 'basics-links') AND event IN ('$pageview', 'site_outbound_click', 'links_click'))
+        FROM events WHERE ${since} AND properties.$lib IN ('basics-site', 'basics-links') AND event IN ('$pageview', 'site_outbound_click', 'links_click') AND ${NOT_INTERNAL})
       WHERE day >= toDate('${from}') GROUP BY day, site, brand, event, kind, source ORDER BY day LIMIT 50000`,
     // Today, yesterday and the day before, each counted only up to the current time of day (Chicago), so today so far
     // can be compared with yesterday at the same hour
@@ -179,12 +259,12 @@ export const queries = (days) => {
         countIf(timestamp >= now() - INTERVAL 1 DAY) AS n1,
         count(DISTINCT distinct_id) AS users, count(DISTINCT if(timestamp >= now() - INTERVAL 7 DAY, distinct_id, NULL)) AS users7,
         avg(if(event IN ('arcade_game_completed', 'quiz_completed', 'mock_completed', 'drill_completed'), toFloat(properties.score), NULL)) AS avg_score
-      FROM events WHERE timestamp >= now() - INTERVAL 30 DAY GROUP BY event, platform, brand, detail ORDER BY n DESC LIMIT 5000`,
+      FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND ${NOT_LEFT_OUT} GROUP BY event, platform, brand, detail ORDER BY n DESC LIMIT 5000`,
     // The events query as it was before the usage detail, asked only if that one fails
     eventsPlain: `SELECT event, coalesce(properties.platform, if(properties.$lib = 'basics-site', 'site', '')) AS platform,
         if(event = 'tab_opened', coalesce(properties.tab, ''), '') AS detail,
         count() AS n, countIf(timestamp >= now() - INTERVAL 7 DAY) AS n7, countIf(timestamp >= now() - INTERVAL 1 DAY) AS n1
-      FROM events WHERE timestamp >= now() - INTERVAL 30 DAY GROUP BY event, platform, detail ORDER BY n DESC LIMIT 600`,
+      FROM events WHERE timestamp >= now() - INTERVAL 30 DAY AND ${NOT_LEFT_OUT} GROUP BY event, platform, detail ORDER BY n DESC LIMIT 600`,
   };
 };
 
@@ -209,12 +289,12 @@ export function toLines({ daily, weekly, newUsers, installs, sites }) {
   const apps = new Map();
   const app = (r) => {
     const k = `${String(r.day).slice(0, 10)}|${r.brand}|${r.platform}`;
-    if (!apps.has(k)) apps.set(k, { date: String(r.day).slice(0, 10), kind: 'app', brand: r.brand, platform: r.platform, dau: 0, wau: 0, newUsers: 0, firstSeen: 0, firstQuiz: 0, day2: 0, installs: 0, opens: 0, answers: 0, quizzes: 0, quizzesDone: 0, mocks: 0, mocksDone: 0, onboarded: 0, drills: 0, fromSite: 0, rateLinks: 0, reviewPrompts: 0, paywall: 0, arcadePlays: 0, arcadeDone: 0, referenceViews: 0, sheetViews: 0, sheetPdfs: 0, sheetShares: 0 });
+    if (!apps.has(k)) apps.set(k, { date: String(r.day).slice(0, 10), kind: 'app', brand: r.brand, platform: r.platform, dau: 0, wau: 0, leftOut: 0, leftOutOwn: 0, newUsers: 0, firstSeen: 0, firstQuiz: 0, day2: 0, installs: 0, opens: 0, answers: 0, quizzes: 0, quizzesDone: 0, mocks: 0, mocksDone: 0, onboarded: 0, started: 0, reachedFive: 0, activated: 0, moreStarted: 0, first10: 0, engaged: 0, leftRun: 0, resumed: 0, drills: 0, fromSite: 0, rateLinks: 0, reviewPrompts: 0, paywall: 0, arcadePlays: 0, arcadeDone: 0, referenceViews: 0, sheetViews: 0, sheetPdfs: 0, sheetShares: 0 });
     return apps.get(k);
   };
-  for (const r of daily) Object.assign(app(r), { dau: num(r.dau), opens: num(r.opens), answers: num(r.answers), quizzes: num(r.quizzes), quizzesDone: num(r.quizzes_done), mocks: num(r.mocks), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded), drills: num(r.drills), fromSite: num(r.from_site), rateLinks: num(r.rate_links), reviewPrompts: num(r.review_prompts), paywall: num(r.paywall), arcadePlays: num(r.arcade_plays), arcadeDone: num(r.arcade_done), referenceViews: num(r.reference_views), sheetViews: num(r.sheet_views), sheetPdfs: num(r.sheet_pdfs), sheetShares: num(r.sheet_shares) });
-  for (const r of weekly ?? []) app(r).wau = num(r.wau);
-  for (const r of newUsers ?? []) Object.assign(app(r), { newUsers: num(r.new_users), firstSeen: num(r.first_seen), firstQuiz: num(r.first_quiz), day2: num(r.day2) });
+  for (const r of daily) Object.assign(app(r), { dau: num(r.dau), opens: num(r.opens), answers: num(r.answers), quizzes: num(r.quizzes), quizzesDone: num(r.quizzes_done), mocks: num(r.mocks), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded), started: num(r.started), reachedFive: num(r.reached_five), moreStarted: num(r.more_started), first10: num(r.first10), engaged: num(r.engaged), leftRun: num(r.left_run), resumed: num(r.resumed), drills: num(r.drills), fromSite: num(r.from_site), rateLinks: num(r.rate_links), reviewPrompts: num(r.review_prompts), paywall: num(r.paywall), arcadePlays: num(r.arcade_plays), arcadeDone: num(r.arcade_done), referenceViews: num(r.reference_views), sheetViews: num(r.sheet_views), sheetPdfs: num(r.sheet_pdfs), sheetShares: num(r.sheet_shares) });
+  for (const r of weekly ?? []) Object.assign(app(r), { wau: num(r.wau), leftOut: num(r.left_out), leftOutOwn: num(r.left_out_own) });
+  for (const r of newUsers ?? []) Object.assign(app(r), { newUsers: num(r.new_users), firstSeen: num(r.first_seen), firstQuiz: num(r.first_quiz), day2: num(r.day2), activated: num(r.activated) });
   for (const r of installs ?? []) app(r).installs = num(r.installs);
   const siteMap = new Map();
   for (const r of sites) {
@@ -262,6 +342,23 @@ export function eventLists(rows) {
   return { events: [...ev.values()].sort((a, b) => b.count - a.count), screens: [...sc.values()].sort((a, b) => b.count - a.count), usage };
 }
 
+const BACKFILL = 'left-out-2026-11-24';
+const BACKFILL_DAYS = 63;
+// The fields each extra query fills: when one is not answered, the refetched days keep their saved values
+const FIELDS_OF = { weekly: ['wau', 'leftOut', 'leftOutOwn'], newUsers: ['newUsers', 'firstSeen', 'firstQuiz', 'day2', 'activated'], installs: ['installs'] };
+/** New lines, with the saved values of a query that failed tonight carried over (instead of zeros). Pure. */
+export function keepSaved(lines, saved, missed) {
+  if (!missed.length) return lines;
+  const old = new Map(saved.filter((r) => r.kind === 'app').map((r) => [`${r.date}|${r.brand}|${r.platform}`, r]));
+  return lines.map((l) => {
+    const o = l.kind === 'app' && old.get(`${l.date}|${l.brand}|${l.platform}`);
+    if (!o) return l;
+    const c = { ...l };
+    for (const name of missed) for (const f of FIELDS_OF[name] ?? []) if (f in o) c[f] = o[f];
+    return c;
+  });
+}
+
 function save(lines, from, state) {
   fs.mkdirSync(DIR, { recursive: true });
   const kept = readLines(file('posthog.jsonl')).filter((r) => r.date < from);
@@ -282,11 +379,15 @@ export async function fetchPostHog() {
   };
   if (!key) { log(`no key in the keychain (${SETUP}); skipped`); done('missing', `no PostHog key in the keychain: ${SETUP}`); return 0; }
   const first = !fs.existsSync(file('posthog.jsonl'));
-  const days = first ? FIRST_DAYS : RECENT_DAYS;
+  // Once after the left-out rule (2026-11-24): refetch BACKFILL_DAYS so the 8-week day-of-week view is filtered too.
+  // Same 7 queries, a wider window; marked done only when every app query worked
+  const backfill = !first && state.backfill !== BACKFILL;
+  const days = first ? FIRST_DAYS : backfill ? Math.max(RECENT_DAYS, BACKFILL_DAYS) : RECENT_DAYS;
   const from = addDays(today, -days + 1);
   const q = queries(days);
   try {
     const rows = {};
+    const missed = [];
     for (const name of ['daily', 'weekly', 'newUsers', 'installs', 'sites']) {
       try { rows[name] = await query(project, key, name, q[name]); } catch (e) {
         // The funnel columns are new (2026-11-23): if that query fails, ask the plain one once so new users stay
@@ -295,7 +396,7 @@ export async function fetchPostHog() {
           try { rows[name] = await query(project, key, 'newUsersPlain', q.newUsersPlain); continue; } catch (e2) { e = e2; }
         }
         // WAU and new users are extras: keep the daily numbers when one of them fails
-        if (name === 'weekly' || name === 'newUsers' || name === 'installs') { log(`${scrub(e.message)}; ${name} left out`); rows[name] = []; } else throw e;
+        if (name === 'weekly' || name === 'newUsers' || name === 'installs') { log(`${scrub(e.message)}; ${name} left out`); rows[name] = []; missed.push(name); } else throw e;
       }
     }
     let events = state.events ?? [];
@@ -311,8 +412,9 @@ export async function fetchPostHog() {
       const asOf = new Date().toISOString();
       sameHour = { asOf, rows: (await query(project, key, 'sameHour', q.sameHour)).map((r) => ({ date: String(r.day).slice(0, 10), brand: r.brand, platform: r.platform, dau: num(r.dau), answers: num(r.answers), quizzesDone: num(r.quizzes_done), mocksDone: num(r.mocks_done), onboarded: num(r.onboarded) })) };
     } catch (e) { log(`same-hour comparison: ${scrub(e.message)}`); }
-    const lines = toLines(rows);
-    Object.assign(state, { status: 'ok', message: `${lines.length} lines for ${from} to ${today}`, checkedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), from, to: today, project, events, screens, usage, sameHour, fake: fake || undefined });
+    const lines = keepSaved(toLines(rows), readLines(file('posthog.jsonl')), missed);
+    if (backfill && !missed.length) state.backfill = BACKFILL;
+    Object.assign(state, { status: 'ok', message: `${lines.length} lines for ${from} to ${today}${missed.length ? `; ${missed.join(', ')} not answered tonight, saved numbers kept` : ''}`, checkedAt: new Date().toISOString(), fetchedAt: new Date().toISOString(), from, to: today, project, events, screens, usage, sameHour, fake: fake || undefined });
     save(lines, from, state);
     log(`${lines.filter((l) => l.kind === 'app').length} app lines, ${lines.filter((l) => l.kind === 'site').length} site lines, ${from} to ${today}${first ? ' (first run)' : ''}`);
     return 0;

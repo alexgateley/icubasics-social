@@ -5,7 +5,7 @@
 // Sets POSTHOG_FAKE=1 (posthog.mjs then skips the keychain) and replaces fetch. Each query is answered from its
 // `name` (basics-social daily / weekly / newUsers / sites / events) with made-up rows in the shape HogQL returns
 // ({ columns, results }), including site visits from Instagram, TikTok and YouTube, which the live sites do not send yet.
-// POSTHOG_FAKE_FAIL=401 answers every query with that HTTP status; POSTHOG_FAKE_FAIL_QUERY=newUsers fails only that query (400).
+// POSTHOG_FAKE_FAIL=401 answers every query with that HTTP status; POSTHOG_FAKE_FAIL_QUERY=newUsers fails only that query (400; a comma list fails each).
 process.env.POSTHOG_FAKE = '1';
 const TZ = 'America/Chicago';
 const today = new Intl.DateTimeFormat('en-CA', { timeZone: TZ }).format(new Date());
@@ -67,18 +67,19 @@ function answer(name) {
       }
       for (const [p, pw] of Object.entries(PLATFORMS)) {
         const dau = Math.round(6 * bw * pw * grow * (0.8 + rand() * 0.4) * (1 + (lift(n) - 1) * 0.3));
-        if (name === 'daily') rows.push([d, b, p, dau, dau + 2, dau * 14, 0, Math.round(dau * 0.8), 0, Math.round(dau / 20), Math.round(dau / 15), Math.round(dau * 0.4), p === 'web' ? Math.round(dau / 6) : 0, Math.round(dau / 25), 0, 0, Math.round(dau / 3), Math.round(dau / 4), Math.round(dau / 2), Math.round(dau / 6), Math.round(dau / 20), Math.round(dau / 40)]);
-        if (name === 'weekly') rows.push([d, b, p, Math.round(dau * 3.2)]);
+        if (name === 'daily') rows.push([d, b, p, dau, dau + 2, dau * 14, 0, Math.round(dau * 0.8), 0, Math.round(dau / 20), Math.round(dau / 15), Math.round(dau * 0.4), p === 'web' ? Math.round(dau / 6) : 0, Math.round(dau / 25), 0, 0, Math.round(dau / 3), Math.round(dau / 4), Math.round(dau / 2), Math.round(dau / 6), Math.round(dau / 20), Math.round(dau / 40),
+          Math.round(dau * 0.6), Math.round(dau * 0.5), Math.round(dau * 0.3), Math.round(dau * 0.2), 0, 0, 0]);
+        if (name === 'weekly') rows.push([d, b, p, Math.round(dau * 3.2), p === 'web' ? 2 : 0, p === 'web' && b === 'rn' ? 1 : 0]);
         if (name === 'installs' && p !== 'web') rows.push([d, b, p, Math.round(dau * 0.25 * lift(n))]);
-        if (name === 'newUsers') { const f = Math.round(dau * 0.3 * lift(n)); rows.push([d, b, p, f, 0, Math.round(f * 0.7), n > 0 ? Math.round(f * 0.3) : 0]); }
+        if (name === 'newUsers') { const f = Math.round(dau * 0.3 * lift(n)); rows.push([d, b, p, f, 0, Math.round(f * 0.7), n > 0 ? Math.round(f * 0.3) : 0, Math.round(f * 0.4)]); }
         if (name === 'newUsersPlain') { const f = Math.round(dau * 0.3 * lift(n)); rows.push([d, b, p, f, 0]); }
       }
     }
   }
   const columns = {
-    daily: ['day', 'brand', 'platform', 'dau', 'opens', 'answers', 'quizzes', 'quizzes_done', 'mocks', 'mocks_done', 'onboarded', 'drills', 'from_site', 'rate_links', 'review_prompts', 'paywall', 'arcade_plays', 'arcade_done', 'reference_views', 'sheet_views', 'sheet_pdfs', 'sheet_shares'],
-    weekly: ['day', 'brand', 'platform', 'wau'],
-    newUsers: ['day', 'brand', 'platform', 'first_seen', 'new_users', 'first_quiz', 'day2'],
+    daily: ['day', 'brand', 'platform', 'dau', 'opens', 'answers', 'quizzes', 'quizzes_done', 'mocks', 'mocks_done', 'onboarded', 'drills', 'from_site', 'rate_links', 'review_prompts', 'paywall', 'arcade_plays', 'arcade_done', 'reference_views', 'sheet_views', 'sheet_pdfs', 'sheet_shares', 'started', 'reached_five', 'more_started', 'first10', 'engaged', 'left_run', 'resumed'],
+    weekly: ['day', 'brand', 'platform', 'wau', 'left_out', 'left_out_own'],
+    newUsers: ['day', 'brand', 'platform', 'first_seen', 'new_users', 'first_quiz', 'day2', 'activated'],
     newUsersPlain: ['day', 'brand', 'platform', 'first_seen', 'new_users'],
     installs: ['day', 'brand', 'platform', 'installs'],
     sites: ['day', 'site', 'brand', 'event', 'kind', 'source', 'n'],
@@ -86,12 +87,16 @@ function answer(name) {
   return { columns, results: rows };
 }
 
+// How many queries a run asked, printed at exit so a test can hold the pull to 7
+let asked = 0;
+process.on('exit', () => console.log(`posthog-fake-api: ${asked} queries asked`));
 globalThis.fetch = async (url, opts = {}) => {
+  asked += 1;
   if (!String(url).startsWith('https://us.posthog.com/api/projects/')) throw new Error(`posthog-fake-api: unexpected ${url}`);
   const fail = Number(process.env.POSTHOG_FAKE_FAIL || 0);
   const body = JSON.parse(opts.body);
   const name = String(body.name ?? '').replace('basics-social ', '');
-  const one = process.env.POSTHOG_FAKE_FAIL_QUERY === name ? 400 : 0;
+  const one = (process.env.POSTHOG_FAKE_FAIL_QUERY ?? '').split(',').includes(name) ? 400 : 0;
   const json = fail ? { detail: 'Invalid personal API key.' } : one ? { detail: 'Unknown function' } : answer(name);
   return new Response(JSON.stringify(json), { status: fail || one || 200, headers: { 'Content-Type': 'application/json' } });
 };
