@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { matchKeyword, messageFor } from './comment-replies.mjs';
+import { matchKeyword, messageFor, ctaFromCaption } from './comment-replies.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..');
@@ -174,4 +174,21 @@ test('a system-user account refused with "invalid for a private reply" counts no
   assert.deepEqual(state.replied, {}, 'never given up');
   assert.deepEqual(state.tries ?? {}, {}, 'no tries counted');
   assert.ok(!a.calls.some((c) => c.includes('/replies')), 'no public "Sent you a DM" without a DM');
+});
+
+test('one-word comments: the post keyword, close misspellings, never a plain "thanks" (Alex 2026-11-24)', () => {
+  assert.equal(matchKeyword('Presser'), 'PRESSORS');
+  assert.equal(matchKeyword('Presser', undefined, 'PRESSORS'), 'PRESSORS');
+  assert.equal(matchKeyword('Norepi', undefined, 'PRESSORS'), 'PRESSORS');
+  assert.equal(matchKeyword('Sepssis'), 'SEPSIS');
+  assert.equal(matchKeyword('Thanks', undefined, 'PRESSORS'), null);
+  assert.equal(matchKeyword('wow'), null);
+  assert.equal(matchKeyword('B', undefined, 'PRESSORS'), null);
+  assert.equal(matchKeyword('Great video', undefined, 'PRESSORS'), null);
+});
+
+test('ctaFromCaption reads the keyword and the promise', () => {
+  assert.deepEqual(ctaFromCaption('Big text\n💬 Comment PRESSORS and I’ll DM you the free vasopressor cheat sheet.'),
+    { keyword: 'PRESSORS', word: 'PRESSORS', promise: 'the free vasopressor cheat sheet' });
+  assert.equal(ctaFromCaption('No ask here'), null);
 });

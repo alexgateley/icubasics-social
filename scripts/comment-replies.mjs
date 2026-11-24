@@ -87,15 +87,56 @@ async function ig(token, endpoint, params = {}, body = null) {
 /** Normalized words of a comment: upper case, letters/digits only, so "sepsis!!" and "Sepsis 🙏" both match. */
 const words = (text) => String(text ?? '').toUpperCase().replace(/[^A-Z0-9 ]+/g, ' ').split(/\s+/).filter(Boolean);
 
-/** The keyword a comment asks for, if any: one of the configured keywords or aliases, in a comment of at most MAX_WORDS words. */
-export function matchKeyword(text, config = CONFIG) {
+/** Words that answer a post without asking for anything, so a one-word "Thanks" or "Wow" never gets a DM. */
+const NOT_A_REQUEST = new Set(['THANKS', 'THANK', 'THX', 'TY', 'WOW', 'NICE', 'LOVE', 'COOL', 'YES', 'YEP', 'YEAH', 'NO', 'NOPE', 'OK', 'OKAY',
+  'AMAZING', 'GREAT', 'AWESOME', 'TRUE', 'SAME', 'FACTS', 'LOL', 'LMAO', 'HELPFUL', 'BRILLIANT', 'PERFECT', 'AGREED', 'AGREE', 'CORRECT',
+  'WRONG', 'HI', 'HELLO', 'HEY', 'GOOD', 'BEST', 'FIRE', 'GOAT', 'BRAVO', 'EXACTLY', 'REAL', 'MOOD', 'YAY', 'A', 'B', 'C', 'D']);
+
+/** Edit distance between two short words (for misspellings like PRESSER for PRESSORS). */
+function distance(a, b) {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) for (let j = 1; j <= b.length; j++)
+    d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+
+/** The keyword a comment asks for, if any.
+ * 1. One of the configured keywords or aliases, in a comment of at most MAX_WORDS words ("SEPSIS please 🙏").
+ * 2. A one-word comment on a post whose caption asks for a keyword (`hint`, from ctaFromCaption): that keyword.
+ *    Alex 2026-11-24: "when people have one word replies its likely asking for that" ("Presser" on the PRESSORS Reel).
+ * 3. A one-word comment with no hint that is a close misspelling of a keyword or alias (one letter off, two for 7+ letters). */
+export function matchKeyword(text, config = CONFIG, hint = null) {
   const w = words(text);
   if (!w.length || w.length > MAX_WORDS) return null;
   const joined = ` ${w.join(' ')} `;
   for (const [key, def] of Object.entries(config.keywords)) {
     for (const k of [key, ...(def.aliases ?? [])]) if (joined.includes(` ${k} `)) return key;
   }
-  return null;
+  if (w.length !== 1 || NOT_A_REQUEST.has(w[0]) || /^\d+$/.test(w[0])) return null;
+  if (hint && config.keywords[hint]) return hint;
+  let best = null;
+  for (const [key, def] of Object.entries(config.keywords)) {
+    for (const k of [key, ...(def.aliases ?? [])]) {
+      if (k.length < 4) continue;
+      const dist = distance(w[0], k);
+      if (dist <= (k.length >= 7 ? 2 : 1) && (!best || dist < best.dist)) best = { key, dist };
+    }
+  }
+  return best?.key ?? null;
+}
+
+/** What a post's caption asks for: "Comment PRESSORS and I'll DM you the free vasopressor cheat sheet." gives
+ * { keyword: 'PRESSORS', word: 'PRESSORS', promise: 'the free vasopressor cheat sheet' }. keyword is null when the word
+ * is not a configured keyword or alias (a caption promising something no DM can send). */
+export function ctaFromCaption(caption, config = CONFIG) {
+  const m = String(caption ?? '').match(/\bComment\s+["“']?([A-Za-z0-9]{2,})["”']?([^\n]*)/);
+  if (!m) return null;
+  const word = m[1].toUpperCase();
+  let keyword = null;
+  for (const [key, def] of Object.entries(config.keywords)) if ([key, ...(def.aliases ?? [])].includes(word)) { keyword = key; break; }
+  const p = m[2].match(/(?:DM|send|message|text)\s+(?:you\s+)?(.+?)(?:[.!]\s|[.!]?$)/i);
+  return { keyword, word, promise: p ? p[1].trim() : null };
 }
 
 /** The brand whose site serves an absolute page URL (a brand without its own pages yet borrows a sister site's page). */
@@ -137,7 +178,7 @@ function saveState(state) {
 
 // ---------- one account ----------
 async function recentReels(token, acct) {
-  const json = await ig(token, `${acct.userId}/media`, { fields: 'id,timestamp,comments_count,media_product_type', limit: '25' });
+  const json = await ig(token, `${acct.userId}/media`, { fields: 'id,timestamp,comments_count,media_product_type,caption', limit: '25' });
   const cutoff = Date.now() - WINDOW_DAYS * 86400000;
   return (json.data ?? []).filter((m) => Date.parse(m.timestamp) >= cutoff);
 }
@@ -179,7 +220,7 @@ async function runAccount(acct, state, budget) {
     for (const c of list) {
       if (state.replied[c.id] || c.from?.id === acct.userId || c.from?.username === acct.handle) continue;
       if (Date.now() - Date.parse(c.timestamp) > WINDOW_DAYS * 86400000) continue;
-      const keyword = matchKeyword(c.text);
+      const keyword = matchKeyword(c.text, CONFIG, ctaFromCaption(m.caption)?.keyword);
       if (!keyword) continue;
       const text = messageFor(keyword, acct.account);
       if (!text) { state.replied[c.id] = { at: new Date().toISOString(), account: acct.account, keyword, status: 'no page for this brand' }; continue; }
