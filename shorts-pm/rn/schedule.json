@@ -29,5 +29,8 @@
   "2026-12-01": "sb-pharm-12-amiodarone",
   "2026-12-02": "sb-pharm-13-atropine",
   "2026-12-03": "sb-pharm-14-diltiazem-amlodipine",
-  "2026-12-04": "sb-pharm-16-ssris"
+  "2026-12-04": "sb-pharm-16-ssris",
+  "2026-12-08": "prioritization-acute-beats-chronic",
+  "2026-12-10": "prioritization-sata-each-option-is-true-or-false",
+  "2026-12-12": "shock-when-fluids-hurt-cardiogenic-shock"
 }

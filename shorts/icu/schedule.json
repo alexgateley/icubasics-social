@@ -27,5 +27,14 @@
   "2026-11-27": "low-blood-sugar",
   "2026-11-28": "hf-diuretics",
   "2026-11-29": "hf-weights-bnp",
-  "2026-11-30": "hf-left-vs-right"
+  "2026-11-30": "hf-left-vs-right",
+  "2026-12-05": "shock-blood-pressure-is-a-late-sign",
+  "2026-12-06": "pairs-antiplatelet-vs-anticoagulant",
+  "2026-12-07": "icp-the-skull-is-a-closed-box",
+  "2026-12-08": "shock-neurogenic-shock-is-slow-and-warm",
+  "2026-12-09": "icp-cpp-is-one-subtraction",
+  "2026-12-10": "pairs-decorticate-vs-decerebrate",
+  "2026-12-11": "pairs-pericarditis-vs-heart-attack",
+  "2026-12-12": "pairs-left-vs-right-brain-stroke",
+  "2026-12-13": "pairs-bell-s-palsy-vs-stroke"
 }

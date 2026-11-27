@@ -1,6 +1,0 @@
-🧪 ASCP MLS/MLT practice: MAP 65 in septic shock
-MAP = mean arterial pressure, the pressure driving blood into organs. Estimate it: DBP + ⅓ pulse pressure, so 90/50 ≈ 63.
-Surviving Sepsis: initial MAP target 65 in septic shock on vasopressors.
-MAP isn't the whole picture: lactate and urine output show perfusion too.
-By Alex G, BSN, RN, CEN, CCRN, CMC, NREMT-P. Education only; follow your institution's protocols.
-#medlabscientist #medicallaboratoryscientist #mls #ascp #labtech
