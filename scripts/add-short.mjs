@@ -7,7 +7,7 @@
 //
 //   node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]
 //   SLOT=pm node scripts/add-short.mjs ...   # the afternoon series instead (shorts-pm/, posts from 3 PM Chicago)
-//   SLOT=am node scripts/add-short.mjs ...   # the morning series (shorts-am/, posts from 7 AM Chicago)
+//   SLOT=am is retired (Alex 2026-11-27: no 7 AM slot); use noon, SLOT=pm or SLOT=evening
 //   SLOT=evening node scripts/add-short.mjs ... # the 6 PM slot (features/, posts from 6 PM Chicago in place of a feature Reel)
 //   ONLY=icu,rn node scripts/add-short.mjs ...   # only these brands (each brand can have its own date)
 import fs from 'node:fs';
@@ -16,6 +16,7 @@ import { execFileSync } from 'node:child_process';
 
 const [folderArg, date, slugArg] = process.argv.slice(2);
 const ROOT = { pm: 'shorts-pm', am: 'shorts-am', evening: 'features' }[process.env.SLOT] ?? 'shorts';
+if (process.env.SLOT === 'am') { console.error('The 7 AM slot is retired (Alex 2026-11-27). Use the noon slot, SLOT=pm or SLOT=evening.'); process.exit(1); }
 const ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null;
 if (!folderArg || !/^\d{4}-\d{2}-\d{2}$/.test(date ?? '')) {
   console.error('Usage: node scripts/add-short.mjs "<topic folder>" <YYYY-MM-DD> [slug]');

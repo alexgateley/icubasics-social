@@ -290,8 +290,14 @@ async function publishScheduled(kindName) {
   console.log(`Published ${label}: media id ${mediaId}`);
 }
 
+// The 7 AM slot is RETIRED (Alex 2026-11-27: "the 7 am slot I dont want anymore, no question reels"): no morning short,
+// no question Reel and no Sunday recap. GitHub's backup cron still runs kind=qotd by default, so this must stay a no-op.
+// To bring it back, set QOTD_RETIRED=false (and reload the com.icubasics.qotd launch agent from LaunchAgents/disabled/).
+const QOTD_RETIRED = process.env.QOTD_RETIRED !== 'false';
+
 // The 7 AM run posts the morning short and then the question Reel and recap; one failing does not stop the other
 async function publishMorningAndToday() {
+  if (QOTD_RETIRED) { console.log('The 7 AM slot is retired (question Reels, Sunday recap, morning short); nothing to post.'); return; }
   let failed = false;
   try { await publishScheduled('morning'); } catch (e) { console.error(`ERROR (morning short): ${e.message}`); failed = true; }
   await publishToday();

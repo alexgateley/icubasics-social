@@ -8,6 +8,14 @@ The posts are generated from the [ICU Basics](https://apps.apple.com/app/id68098
 banks by `scripts/social/push-month.sh` in the app repo, which renders a month of slides and
 pushes them here.
 
+> **2026-11-27: the 7 AM slot is retired.** Alex no longer wants question Reels, the Sunday recap, the
+> 7 AM morning short, feature Reels or flat-style videos. `publish.mjs` treats kind=qotd as a no-op
+> (`QOTD_RETIRED`), the `com.icubasics.qotd` launch agent is parked in `~/Library/LaunchAgents/disabled/`,
+> `shorts-am/*/schedule.json` are empty, `SLOT=am` is refused by add-short.mjs and the
+> `schedule.flat-paused.json` lists are gone. Only storybook shorts post now: noon (`shorts/`), 3 PM
+> (`shorts-pm/`) and the evening slot (`features/`, which since 2026-11-12 holds storybook shorts, not app
+> feature Reels). The question-Reel and feature-Reel media below are kept in git until Alex decides.
+
 ```
 posts/<date>-<exam>/1-question.jpg   slide 1
 posts/<date>-<exam>/2-answer.jpg     slide 2
