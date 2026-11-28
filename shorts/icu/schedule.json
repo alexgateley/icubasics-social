@@ -36,5 +36,11 @@
   "2026-12-10": "pairs-decorticate-vs-decerebrate",
   "2026-12-11": "pairs-pericarditis-vs-heart-attack",
   "2026-12-12": "pairs-left-vs-right-brain-stroke",
-  "2026-12-13": "pairs-bell-s-palsy-vs-stroke"
+  "2026-12-13": "pairs-bell-s-palsy-vs-stroke",
+  "2026-12-14": "vent-modes-low-oxygen-or-high-co2",
+  "2026-12-15": "vent-modes-predicted-or-actual-weight",
+  "2026-12-16": "vent-modes-peak-high-tube-or-lungs",
+  "2026-12-17": "vent-modes-ac-simv-or-pressure-support",
+  "2026-12-18": "vent-modes-asthma-on-the-vent-bp-falling",
+  "2026-12-19": "vent-modes-ready-for-the-breathing-trial"
 }
