@@ -15,5 +15,7 @@
   "2026-12-03": "medic-ems-paralyzed-is-not-asleep",
   "2026-12-04": "medic-ems-bends-or-gas-embolism",
   "2026-12-05": "airway-flat-line-or-slow-slide",
-  "2026-12-06": "pairs-anion-gap-vs-non-gap-acidosis"
+  "2026-12-06": "pairs-anion-gap-vs-non-gap-acidosis",
+  "2026-12-07": "vent-modes-low-oxygen-or-high-co2",
+  "2026-12-08": "vent-modes-predicted-or-actual-weight"
 }
