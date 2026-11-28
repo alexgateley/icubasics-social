@@ -166,6 +166,10 @@ export function messageFor(key, brand, config = CONFIG) {
 }
 
 // ---------- state ----------
+function backOff(state, acct, hours, reason) {
+  state.backoff ??= {};
+  state.backoff[acct.account] = { until: new Date(Date.now() + hours * 3600000).toISOString(), reason };
+}
 const readState = () => { try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch { return { replied: {}, counts: {} }; } };
 function saveState(state) {
   const cutoff = Date.now() - 30 * 86400000;
@@ -200,6 +204,9 @@ async function runAccount(acct, state, budget) {
   if (!token) { log(`@${acct.handle}: no token in the keychain (sh scripts/setup-keychain.sh ${acct.account}); skipped`); return 0; }
   if (!acct.userId) acct.userId = readSecret(`IG_USER_ID${acct.suffix}`);
   if (!acct.userId) { log(`@${acct.handle}: no Instagram user ID in the keychain (sh scripts/setup-keychain.sh ${acct.account}); skipped`); return 0; }
+  // Backing off (see main and the private-reply refusal below): don't call Meta again for this account until the time passes
+  const until = state.backoff?.[acct.account]?.until;
+  if (!CHECK && until && Date.parse(until) > Date.now()) return 0;
   const reels = await recentReels(token, acct);
   if (CHECK) {
     const withComments = reels.find((m) => m.comments_count > 0);
@@ -237,7 +244,9 @@ async function runAccount(acct, state, budget) {
         // Basics Posting system user has no Page assigned. That is setup, not the comment, so no try is counted: the
         // comment waits (up to Instagram's 7 days) until the account can send, instead of being given up after three runs.
         if (isSystemUser(token) && /invalid for a private reply/i.test(e.message)) {
-          log(`@${acct.handle}: Instagram will not take private replies from this token (${scrub(e.message)}); nothing counted as a try. Keyword comments wait until the account is set up for DMs (linked Facebook Page assigned to the system user, or an Instagram-login token)`);
+          log(`@${acct.handle}: Instagram will not take private replies from this token (${scrub(e.message)}); nothing counted as a try. Keyword comments wait until the account is set up for DMs (linked Facebook Page assigned to the system user, or an Instagram-login token). Trying again in 24 hours`);
+          // Retrying this every 10 minutes (rt, 2026-11-19 to 20) came just before Meta blocked the whole Basics Posting app; once a day is enough
+          backOff(state, acct, 24, 'private replies refused');
           return sent;
         }
         state.tries ??= {};
@@ -267,7 +276,15 @@ async function main() {
   let failed = false;
   for (const acct of ACCOUNTS) {
     try { budget -= await runAccount(acct, state, budget); }
-    catch (e) { failed = true; log(`@${acct.handle}: ${scrub(e.message)}`); }
+    catch (e) {
+      failed = true;
+      // "API access blocked" (code 200, subcode 5258005) hit every Basics Posting token at once from 2026-11-20 12:29 UTC,
+      // even debug_token: the app or its system user is blocked on Meta's side, not one account. Check every 6 hours, not every 10 minutes.
+      if (e.code === 200 && /API access blocked/i.test(e.message)) {
+        backOff(state, acct, 6, 'API access blocked');
+        log(`@${acct.handle}: ${scrub(e.message)} Meta is blocking this app's token; trying again in 6 hours`);
+      } else log(`@${acct.handle}: ${scrub(e.message)}`);
+    }
   }
   if (!CHECK && !DRY) saveState(state);
   if (failed) process.exitCode = 1;
